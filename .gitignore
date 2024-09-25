@@ -4,5 +4,5 @@
 .Ruserdata
 
 # about data 
-/Data/
+Data/*.xlsx
 
