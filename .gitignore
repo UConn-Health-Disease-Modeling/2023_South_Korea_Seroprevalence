@@ -6,3 +6,5 @@
 # about data 
 Data/*.xlsx
 
+
+.DS_Store
