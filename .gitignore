@@ -4,7 +4,7 @@
 .Ruserdata
 
 # about data 
-Data/*.xlsx
+Data/
 
 
 .DS_Store
