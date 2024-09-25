@@ -8,3 +8,7 @@ Data/
 
 # about the .DS_Store
 .DS_Store
+
+# about the manuscripts 
+Manuscripts/Achieve/
+Manuscripts/.DS_Store
