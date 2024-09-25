@@ -12,3 +12,6 @@ Data/
 # about the manuscripts
 Manuscripts/Achieve/
 Manuscripts/.DS_Store
+
+# about the code
+Code/TempData
