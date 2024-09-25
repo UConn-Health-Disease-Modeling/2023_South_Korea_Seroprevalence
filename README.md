@@ -1,4 +1,4 @@
-# Antibody Decay and Infection Risk in Hybrid vs. Vaccine-Induced Immunity Populations: A South Korean Study
+# Protective effectiveness of SARS-CoV-2 infection risk between hybrid and vaccine-induced immunity against the omicron variant
 
 ## Overview
 
@@ -34,4 +34,4 @@ Research has suggested that vaccine effectiveness may decrease over time. Howeve
 
 ## Contact
 
-For questions or inquiries, please contact [Your Name] at [email@example.com].
+For questions or inquiries, please contact Franky Zhang at zfranky6@uconn.edu.
