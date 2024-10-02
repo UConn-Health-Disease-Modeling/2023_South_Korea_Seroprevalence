@@ -251,8 +251,8 @@ library(openxlsx)
 # non_infec <- sero2[!infec_index, ]
 # 
 # ### infec_rule1: exclude those who had N_cha_S2 Nonreactive or missing
-# infec_rule1 <- (infec$N_cha_S2 == "Nonreactive" | is.na(infec$N_cha_S2))
-# infec <- infec[!infec_rule1, ]
+# # infec_rule1 <- (infec$N_cha_S2 == "Nonreactive" | is.na(infec$N_cha_S2))
+# # infec <- infec[!infec_rule1, ]
 # 
 # ### non_infec_rule1: exclude those who didn't attend the 2nd surveillance
 # non_infec_rule1 <- is.na(non_infec$collect_date_S2)
@@ -436,14 +436,16 @@ ggsurv$table +
 log_rank_test <- survdiff(Surv(time / 30, status) ~ immune_type + age_category, data = data)
 print(log_rank_test)
 
+
+data$immune_type <- factor(data$immune_type, levels = c("vac-induced", "hybrid-induced"))
 # continue to do the cox-hazard regression (Undjusted Model)
-cox_model <- coxph(Surv(time / 30, status) ~ age_category, data = data)
+cox_model <- coxph(Surv(time / 30, status) ~ sex, data = data)
 summary(cox_model)
 
 
 
 # continue to do the cox-hazard regression (Adjusted Model)
-cox_model <- coxph(Surv(time / 30, status) ~ immune_type + age_category, data = data)
+cox_model <- coxph(Surv(time / 30, status) ~ immune_type + sex + age_category, data = data)
 summary(cox_model)
 
 

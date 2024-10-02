@@ -83,6 +83,32 @@ legend("topright",
        legend = c("hyb.2dose", "hyb.34dose"), 
        fill = c(rgb(0, 0, 1, 0.5), rgb(0, 1, 0, 0.5)))
 
+#################################################################
+
+table(hyb.2dose$sex)
+table(hyb.34dose$sex)
+
+hist(hyb.2dose$S_num_S1, 
+     breaks = 30, 
+     col = rgb(0, 0, 1, 0.5),   # Set semi-transparent blue color
+     xlim = range(c(hyb.2dose$S_num_S1, hyb.34dose$S_num_S1)), 
+     ylim = c(0, max(hist(hyb.2dose$S_num_S1, plot = FALSE)$counts, 
+                     hist(hyb.34dose$S_num_S1, plot = FALSE)$counts)),
+     main = "Histogram Comparison of Immunology Sequences",
+     xlab = "S ab Levels",
+     ylab = "Frequency")
+
+# Add the second histogram (hyb.34dose) to the same plot
+hist(hyb.34dose$S_num_S1, 
+     breaks = 30, 
+     col = rgb(0, 1, 0, 0.5),   # Set semi-transparent green color
+     add = TRUE)
+
+# Add a legend to distinguish the two sequences
+legend("topright", 
+       legend = c("hyb.2dose", "hyb.34dose"), 
+       fill = c(rgb(0, 0, 1, 0.5), rgb(0, 1, 0, 0.5)))
+
 # # load data 
 # url <- "Code/TempData/Mar17_Case_Study_Data.csv"
 # df <- read.csv(url)
