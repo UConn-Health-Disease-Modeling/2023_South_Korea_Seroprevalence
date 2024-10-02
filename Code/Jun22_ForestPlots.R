@@ -24,6 +24,65 @@ library(forestplot)
 # ## Process the data ##
 # ######################
 
+table(df$induced_index)
+hyb.2dose <- df |> filter(induced_index == "hybrid-induced") |> filter(vac_before_S1_freq == 2)
+hyb.34dose <- df |> filter(induced_index == "hybrid-induced") |> filter(vac_before_S1_freq == 3 | vac_before_S1_freq == 4)
+
+hyb.2dose$latest_immunology
+hyb.34dose$latest_immunology
+
+boxplot(hyb.2dose$latest_immunology, hyb.34dose$latest_immunology,
+        names = c("hyb.2dose", "hyb.34dose"),
+        main = "Comparison of Immunology Sequences",
+        ylab = "Immunology Levels",
+        col = c("lightblue", "lightgreen"))
+
+# Create density plots for both sequences
+density_2dose <- density(hyb.2dose$latest_immunology)
+density_34dose <- density(hyb.34dose$latest_immunology)
+
+# Plot the first density (hyb.2dose)
+plot(density_2dose, 
+     main = "Density Plot of Immunology Sequences",
+     xlab = "Immunology Levels",
+     ylab = "Density",
+     col = "blue", 
+     lwd = 2)
+
+lines(density_34dose, 
+      col = "green", 
+      lwd = 2)
+
+# Add a legend to distinguish the two sequences
+legend("topright", 
+       legend = c("hyb.2dose", "hyb.34dose"), 
+       col = c("blue", "green"), 
+       lwd = 2)
+
+
+
+
+hist(hyb.2dose$latest_immunology, 
+     breaks = 30, 
+     col = rgb(0, 0, 1, 0.5),   # Set semi-transparent blue color
+     xlim = range(c(hyb.2dose$latest_immunology, hyb.34dose$latest_immunology)), 
+     ylim = c(0, max(hist(hyb.2dose$latest_immunology, plot = FALSE)$counts, 
+                     hist(hyb.34dose$latest_immunology, plot = FALSE)$counts)),
+     main = "Histogram Comparison of Immunology Sequences",
+     xlab = "Immunology Levels",
+     ylab = "Frequency")
+
+# Add the second histogram (hyb.34dose) to the same plot
+hist(hyb.34dose$latest_immunology, 
+     breaks = 30, 
+     col = rgb(0, 1, 0, 0.5),   # Set semi-transparent green color
+     add = TRUE)
+
+# Add a legend to distinguish the two sequences
+legend("topright", 
+       legend = c("hyb.2dose", "hyb.34dose"), 
+       fill = c(rgb(0, 0, 1, 0.5), rgb(0, 1, 0, 0.5)))
+
 # # load data 
 # url <- "Code/TempData/Mar17_Case_Study_Data.csv"
 # df <- read.csv(url)

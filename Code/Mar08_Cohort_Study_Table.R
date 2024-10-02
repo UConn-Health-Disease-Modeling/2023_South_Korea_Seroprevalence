@@ -228,7 +228,7 @@ infec <- sero2[infec_index, ]
 non_infec <- sero2[!infec_index, ]
 
 # Apply infection rule 1: Exclude those with Nonreactive or missing N_cha_S2
-infec <- infec[!(infec$N_cha_S2 == "Nonreactive" | is.na(infec$N_cha_S2)), ]
+# infec <- infec[!(infec$N_cha_S2 == "Nonreactive" | is.na(infec$N_cha_S2)), ]
 
 # Apply non-infection rule 1: Exclude those who didn't attend the 2nd surveillance
 non_infec <- non_infec[!is.na(non_infec$collect_date_S2), ]
@@ -312,18 +312,15 @@ df <- df |>
 df$event_after_S1 <- factor(df$event_after_S1, 
                             levels = c("infec_hosp", "infec", "no_events"))
 
-
-
+table(df$induced_index)
 ##################################################################
 # filling the tables 
 table(df$event_after_S1, df$induced_index)
 
-vac_group <- df |> filter(induced_index == "vac-induced")
-hyb_group <- df |> filter(induced_index == "hybrid-induced")
+vac_group <- df |> dplyr::filter(induced_index == "vac-induced")
+hyb_group <- df |> dplyr::filter(induced_index == "hybrid-induced")
 
-table(hyb_group$event_after_S1, hyb_group$age_cat)
-
-
+table(vac_group$event_after_S1)
 
 
 
