@@ -2,6 +2,8 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 
+
+
 # ######################
 # ## Process the data ##
 # ######################
@@ -17,7 +19,7 @@ S_12 <- readxl::read_excel(url_S_12) |>
                 starts_with("vax"), starts_with("conf"), 
                 starts_with("collect"), 
                 starts_with("p21_q2"), "q2_S2", 
-                "p21_q4_S1", "q6_S2") |> 
+                "p21_q4_S1", "q6_S2", "q9_3_S2") |> 
   dplyr::rename(
     hypertension1    = "p21_q2_1_S1",     
     diabetes1        = "p21_q2_2_S1",
@@ -33,7 +35,8 @@ S_12 <- readxl::read_excel(url_S_12) |>
     otherdisease_S2_raw = "q2_S2", 
     sym_S1_raw       = "p21_q4_S1",
     sym_S2_raw       = "q6_S2", 
-    vax.date5        = "vax.date.bi"
+    vax.date5        = "vax.date.bi",
+    hosp.S2          = "q9_3_S2"
   ) |> 
   # Create new variables for disease status and symptoms
   dplyr::mutate(
@@ -138,8 +141,6 @@ S_12 <- S_12 |>
 # S_12 |> select(collect_date_S1, collect_date_S2, conf_date1, conf_date2, conf_date3, 
 #                nearest_confirmed_before_S1, nearest_confirmed_before_S2, nearest_confirmed_after_S1) |> head(20)
 
-
-
 S_12 <- S_12 |>
   mutate(gap_between_surveys = as.integer(collect_date_S2 - collect_date_S1),
          infec_gap_after_S1 = as.integer(nearest_confirmed_after_S1 - collect_date_S1),
@@ -149,7 +150,6 @@ S_12 <- S_12 |>
                                           ifelse(is.na(infec_gap_after_S1), "no",
                                                  ifelse(!is.na(infec_gap_after_S1) & infec_gap_after_S1<=gap_between_surveys,
                                                         "yes", "no"))))
-
 
 S_12 <- S_12 |>
   rowwise() |>
@@ -195,9 +195,28 @@ S_12 <- S_12 |>
 # ######## end #########
 # ######################
 
+# save_url <- "Code/TempData/Oct09_processed_S12.rds"
+# saveRDS(S_12, save_url)
+
+
 # flow chart excluding criteria 1: excluding those with vaccination during S1 and S2 
 S_12.v2 <- S_12 |> filter(between_S1_S2_vac_cat == "no")
 
+# dim(S_12)[1] - dim(S_12.v2)[1] # number of exclusion 1 
+
+S_12.v2 <- S_12.v2 |> mutate(immune_type = ifelse(group1 == 4, "naive",
+                                                  ifelse(group1 == 3, "vac-induced",
+                                                         ifelse(group1 == 2, "inf-induced",
+                                                                ifelse(group1 == 1, "hybrid-induced", NA)))))
+S_12.v2$immune_type <- factor(S_12.v2$immune_type, levels = c("hybrid-induced", "vac-induced", "inf-induced", "naive"))
+
+S_12.vac    <- S_12.v2 |> filter(immune_type == "vac-induced") |> filter(vac_before_S1_freq > 0)
+S_12.hybrid <- S_12.v2 |> filter(immune_type == "hybrid-induced") |> filter(vac_before_S1_freq > 0)
+
+# (S_12.vac$between_S1_S2_infec_cat |> table())/dim(S_12.vac)[1]
+# (S_12.hybrid$between_S1_S2_infec_cat |> table())/dim(S_12.hybrid)[1]
+
+cox_hazard_data <- rbind(S_12.vac, S_12.hybrid)
 
 
 
@@ -207,6 +226,60 @@ S_12.v2 <- S_12 |> filter(between_S1_S2_vac_cat == "no")
 
 
 
+# fill the tables (using the cox-harzard data)
+cox_hazard_data$age_cat <- cut(cox_hazard_data$age_base,
+                               breaks = c(-Inf, 19, 39, 59, 79, Inf),
+                               labels = c("<20", "20-39", "40-59", "60-79", "80+"),
+                               right = FALSE)
+cox_hazard_data$age_cat <- factor(cox_hazard_data$age_cat, levels = c("<20", "20-39", "40-59", "60-79", "80+"))
+cox_hazard_data$sex <- factor(cox_hazard_data$sex, levels = c("Male", "Female"))
+cox_hazard_data$otherdisease_S1 <- factor(cox_hazard_data$otherdisease_S1, levels = c("yes", "no"))
+cox_hazard_data <- cox_hazard_data %>% mutate(latest_immunology = ifelse(is.na(vac_gap_before_S1), infec_gap_before_S1,
+                                                                         ifelse(is.na(infec_gap_before_S1), vac_gap_before_S1,
+                                                                                ifelse(vac_gap_before_S1 < infec_gap_before_S1,
+                                                                                       vac_gap_before_S1, infec_gap_before_S1))))
+cox_hazard_data <- cox_hazard_data %>% mutate(latest_immunology_cat = ifelse(latest_immunology >=0 & latest_immunology <=30, "<1 month",
+                                                                             ifelse(latest_immunology > 30 &
+                                                                                      latest_immunology <= 180, "1-6 months",
+                                                                                    ifelse(latest_immunology > 180 &
+                                                                                             latest_immunology <= 365, "6-12 months", ">1 year"))))
+
+cox_hazard_data[is.na(cox_hazard_data$latest_immunology_cat), ]$latest_immunology_cat <- "no_event"
+cox_hazard_data$S_num_S1_cat <- cut(cox_hazard_data$S_num_S1,
+                                    breaks = c(-Inf, 6000, 15000, 24000, Inf),
+                                    labels = c("<6000", "6000-15000", "15000-24000", ">=24000"),
+                                    right = FALSE,
+                                    include.lowest = TRUE,
+                                    addNA = TRUE)
+cox_hazard_data$N_num_S1_cat <- cut(cox_hazard_data$N_num_S1, 
+                                    breaks = c(-Inf, 1, 10, 20, Inf),
+                                    labels = c("<1", "1-10", "10-20", ">=20"),
+                                    right = FALSE,
+                                    include.lowest = TRUE,
+                                    addNA = TRUE)
+
+cox_hazard_data <- cox_hazard_data |>
+  dplyr:: mutate(
+    event_after_S1 = dplyr::case_when(
+      between_S1_S2_infec_cat == "yes" & hosp.S2 == "yes" ~ "infec_hosp", 
+      between_S1_S2_infec_cat == "yes" & hosp.S2 == "no" ~ "infec", 
+      between_S1_S2_infec_cat == "yes" & is.na(hosp.S2) ~ "infec", 
+      between_S1_S2_infec_cat == "no" ~ "no_events"
+    )
+  )
+cox_hazard_data$latest_immunology_cat <- factor(cox_hazard_data$latest_immunology_cat, levels = c("<1 month", "1-6 months", "6-12 months", ">1 year"))
+  
+cox_hazard_data.vac    <- cox_hazard_data |> filter(immune_type == "vac-induced")
+cox_hazard_data.hybrid <- cox_hazard_data |> filter(immune_type == "hybrid-induced")
+
+# fill the table1 
+cox_hazard_data.hybrid$age_cat |> table()
+
+# # save cox hazad data
+# Cox_Hazard.url <- "Code/TempData/cox_hazard_data.rds"
+# saveRDS(cox_hazard_data, Cox_Hazard.url)
+# 
+# cox_hazard_data <- readRDS(Cox_Hazard.url)
 
 
 
@@ -215,3 +288,23 @@ S_12.v2 <- S_12 |> filter(between_S1_S2_vac_cat == "no")
 
 
 
+regression_data <- cox_hazard_data
+
+# regression_data |> filter(N_cha_S1 == "Nonreactive" & N_cha_S2 == "Reactive") |> dim()
+# regression_data |> filter(N_cha_S1 == "Nonreactive" & N_cha_S2 == "Reactive" & between_S1_S2_infec_cat == "yes") |> dim()
+regression_data$between_S1_S2_infec_cat[regression_data$N_cha_S1 == "Nonreactive" & regression_data$N_cha_S2 == "Reactive"] <- "yes"
+
+
+regression.vac    <- regression_data |> filter(immune_type == "vac-induced")
+regression.hybrid <- regression_data |> filter(immune_type == "hybrid-induced")
+
+# table(regression.vac$between_S1_S2_infec_cat)
+# table(regression.hybrid$between_S1_S2_infec_cat)
+# table(regression.vac$between_S1_S2_infec_cat)/dim(regression.vac)[1]
+
+
+# # save regression data
+# Regression.url <- "Code/TempData/regression_data.rds"
+# saveRDS(regression_data, Regression.url)
+# 
+# regression_data <- readRDS(Regression.url)
