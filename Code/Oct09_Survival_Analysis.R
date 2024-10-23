@@ -93,14 +93,14 @@ p1 <- ggsurv$plot +
                                title.hjust = 0.5,  # Center the title
                                label.position = "right",  # Adjust label positions
                                label.hjust = 0)) + 
-  ylab("Probability of protective effectiveness against infection") 
-ggsave("Results/plots_updated/fig3(1).pdf", plot = p1, width = 10, height = 8)
+  ylab("Probability of protective effectiveness against infection") + theme(plot.margin=grid::unit(c(0,0,0,0), "mm"))
+ggsave("Results/plots_updated/fig3(1).pdf", plot = p1, width = 10, height = 6)
 
 
 p2 <- ggsurv$table +
-  theme(legend.position = "none")  # Remove legend from the risk table
+  theme(legend.position = "none") + theme(plot.margin=grid::unit(c(0,0,0,0), "mm"))
 # ggsurv$ncensor.plot
-ggsave("Results/plots_updated/fig3(2).pdf", plot = p2, width = 10, height = 3)
+ggsave("Results/plots_updated/fig3(2).pdf", plot = p2, width = 10, height = 2.5)
 
 
 

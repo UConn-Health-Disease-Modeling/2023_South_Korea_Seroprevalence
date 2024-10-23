@@ -74,6 +74,19 @@ colnames(df2) <- cols
 
 df3 <- rbind(df1, df2)
 
+
+
+
+# df3 <- df |> select(GNO, 
+#                     S_num_S1,
+#                     latest_immunology,
+#                     age_cat, sex, 
+#                     immune_type)
+# 
+# colnames(df3)[2] <- "S_ab"
+# colnames(df3)[1] <- "ID"
+# colnames(df3)[4] <- "age"
+
 df3 <- df3 %>% filter(!(immune_type == "hybrid-induced" & latest_immunology >= 420 & latest_immunology < 450 & S_ab > 20000))
 
 # saveRDS(df3, file = "Code/TempData/Oct09_TrajectoryPlotsData.rds")
@@ -118,15 +131,24 @@ plot_data <- function(data){
     filter(latest_immunology_cat != "no_event")
   
   df_summary <- data %>%
-    group_by(latest_immunology_cat, immune_type
-             , age
+    group_by(latest_immunology_cat, immune_type, age
     ) %>%
     summarize(mean_S_ab = mean(S_ab, na.rm = TRUE),
-              sd_S_ab = sd(S_ab, na.rm = TRUE),  # Calculate standard deviation
+              sd_S_ab = sd(S_ab, na.rm = TRUE),
               .groups = 'drop') %>%
-    mutate(ymin = pmax(mean_S_ab - sd_S_ab, 0.1),  # Ensure ymin is positive and non-zero
+    mutate(ymin = pmax(mean_S_ab - sd_S_ab, 0.1),
            ymax = mean_S_ab + sd_S_ab) %>%
-    na.omit()  # Remove NAs that may result from sd calculation
+    na.omit()
+  
+  # df_summary <- data %>%
+  #   group_by(latest_immunology_cat, age
+  #   ) %>%
+  #   summarize(mean_S_ab = mean(S_ab, na.rm = TRUE),
+  #             sd_S_ab = sd(S_ab, na.rm = TRUE), 
+  #             .groups = 'drop') %>%
+  #   mutate(ymin = pmax(mean_S_ab - sd_S_ab, 0.1), 
+  #          ymax = mean_S_ab + sd_S_ab) %>%
+  #   na.omit() 
   
   
   # Round mean values to integer for labels
@@ -150,9 +172,25 @@ colors <- c("#ADD8E6", "#6495ED", "#0000FF", "#191970", "#FFA07A", "#FF6347", "#
 labels <- c("hybrid-induced, <20", "hybrid-induced, 20-40", "hybrid-induced, 40-60", "hybrid-induced, >60",
             "vac-induced, <20", "vac-induced, 20-40", "vac-induced, 40-60", "vac-induced, >60")
 
+plot_df <- plot_data(df)
+# plot_df <- plot_data(df3)
+
+
 # Filter the vac- and hybrid- groups 
 plot_df_vac <- plot_df %>% filter(immune_type == "vac-induced")
 plot_df_hybrid <- plot_df %>% filter(immune_type == "hybrid-induced")
+
+plot_df.avg_hybrid <- plot_df_hybrid |> group_by(latest_immunology_cat) |> summarise(mean_S_ab.avg = mean(mean_S_ab))
+plot_df.avg_vac <- plot_df_vac |> group_by(latest_immunology_cat) |> summarise(mean_S_ab.avg = mean(mean_S_ab))
+
+plot_df.avg <- plot_df
+plot_df.avg.mean <- plot_df.avg %>% group_by(latest_immunology_cat) %>% summarise(mean_S_ab.avg = mean(mean_S_ab))
+  
+# check the sudden drop
+# df %>% filter(immune_type == "vac-induced" & latest_immunology > 60 & latest_immunology < 90)
+# df %>% filter(immune_type == "vac-induced" & latest_immunology > 90 & latest_immunology < 120)
+
+
 
 # Plot 1: Hybrid-induced group (individual points and lines)
 plot1 <- ggplot(plot_df_hybrid, aes(x = latest_immunology_cat, y = mean_S_ab)) +
@@ -167,7 +205,8 @@ plot1 <- ggplot(plot_df_hybrid, aes(x = latest_immunology_cat, y = mean_S_ab)) +
         legend.justification = c("right", "top"),
         plot.title = element_blank()) +  # Remove individual titles
   ylim(0, 25000) +
-  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level")
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
+  theme(panel.grid.major = element_blank())
 
 # Plot 2: Vaccine-induced group (individual points and lines)
 plot2 <- ggplot(plot_df_vac, aes(x = latest_immunology_cat, y = mean_S_ab)) +
@@ -182,7 +221,8 @@ plot2 <- ggplot(plot_df_vac, aes(x = latest_immunology_cat, y = mean_S_ab)) +
         legend.justification = c("right", "top"),
         plot.title = element_blank()) +  # Remove individual titles
   ylim(0, 25000) +
-  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level")
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
+  theme(panel.grid.major = element_blank())
 
 # Plot 3: Hybrid-induced group (average line)
 plot3 <- ggplot(plot_df.avg_hybrid, aes(x = latest_immunology_cat, y = mean_S_ab.avg, group = 1)) +  
@@ -192,7 +232,8 @@ plot3 <- ggplot(plot_df.avg_hybrid, aes(x = latest_immunology_cat, y = mean_S_ab
   theme(legend.position = "none", # Hide legend for this plot
         plot.title = element_blank()) +  # Remove individual titles
   ylim(0, 25000) +                                      
-  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level")
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
+  theme(panel.grid.major = element_blank())
 
 # Plot 4: Vaccine-induced group (average line)
 plot4 <- ggplot(plot_df.avg_vac, aes(x = latest_immunology_cat, y = mean_S_ab.avg, group = 1)) +  
@@ -202,13 +243,44 @@ plot4 <- ggplot(plot_df.avg_vac, aes(x = latest_immunology_cat, y = mean_S_ab.av
   theme(legend.position = "none", # Hide legend for this plot
         plot.title = element_blank()) +  # Remove individual titles
   ylim(0, 25000) +                                      
-  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level")
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
+  theme(panel.grid.major = element_blank())
+
+plot5 <- ggplot(plot_df.avg.mean, aes(x = latest_immunology_cat, y = mean_S_ab.avg, group = 1)) +  
+  geom_point(size = 3, color = "#32CD32") +
+  geom_line(color = "#32CD32") + 
+  theme_bw() + 
+  theme(legend.position = "none", # Hide legend for this plot
+        plot.title = element_blank()) +  # Remove individual titles
+  ylim(0, 25000) +                                      
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
+  theme(panel.grid.major = element_blank())
+
+plot6 <- ggplot(plot_df.avg, aes(x = latest_immunology_cat, y = mean_S_ab)) +
+  geom_point(aes(color = age), size = 3) +
+  geom_line(aes(group = age, color = age)) + 
+  scale_color_manual(values = c("<20" = "#90EE90", 
+                                "20-40" = "#3CB371", 
+                                "40-60" = "#228B22", 
+                                ">60" = "#006400")) + 
+  theme_bw() + 
+  theme(legend.position = c(0.95, 0.95),
+        legend.justification = c("right", "top"),
+        plot.title = element_blank()) +  # Remove individual titles
+  ylim(0, 25000) +
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
+  theme(panel.grid.major = element_blank())
+
 
 # Combine the four plots, with "Hybrid-induced" on the left and "Vaccine-induced" on the right, titles at the top
 combined_plot <- grid.arrange(
+  arrangeGrob(plot5, plot6, ncol = 1, top = textGrob("Hybrid & Vaccine Combined", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
   arrangeGrob(plot3, plot1, ncol = 1, top = textGrob("Hybrid-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
   arrangeGrob(plot4, plot2, ncol = 1, top = textGrob("Vaccine-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
-  ncol = 2
+  ncol = 3
 )
 
-ggsave("Results/plots_updated/fig2.pdf", plot = combined_plot, width = 10, height = 8)
+
+
+
+ggsave("Results/plots_updated/fig2_complete.pdf", plot = combined_plot, width = 15, height = 8)

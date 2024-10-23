@@ -7,11 +7,11 @@ library(lme4)
 library(pROC)
 library(cowplot)
 
-# Regression.url <- "Code/TempData/regression_data.rds"
-# df <- readRDS(Regression.url)
+Regression.url <- "Code/TempData/regression_data.rds"
+df <- readRDS(Regression.url)
 
-Cox_Hazard.url <- "Code/TempData/cox_hazard_data.rds"
-df <- readRDS(Cox_Hazard.url)
+# Cox_Hazard.url <- "Code/TempData/cox_hazard_data.rds"
+# df <- readRDS(Cox_Hazard.url)
 
 # Process variables
 df <- df %>%
@@ -65,11 +65,10 @@ plot_vac <- ggplot(combination_df %>% filter(immune_type == "vac-induced"),
                    aes(x = S_num_S1, y = pred, group = age_category, color = age_category)) +
   geom_line(linewidth = 1) +  
   labs(x = "S antibody from surveillance", y = "Probability of Remaining Free from Infection") +
-  ggtitle("Vaccine-induced") + 
+  ggtitle("Vaccine-induced (Undetected infection included)") + 
   theme_bw() +
   ylim(0.5, 1) +
-  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) +
-  geom_hline(yintercept = 0.8, linetype = "dashed", color = "black") 
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) 
 
 crossing_points <- combination_df %>%
   filter(immune_type == "vac-induced") %>%
@@ -78,9 +77,6 @@ crossing_points <- combination_df %>%
   summarise(crossing_x = min(S_num_S1))  
 
 plot_vac1 <- plot_vac + 
-  geom_segment(data = crossing_points, aes(x = crossing_x, xend = crossing_x, y = 0.5, yend = 0.8), 
-               linetype = "dashed", color = "black") +  
-  geom_point(data = crossing_points, aes(x = crossing_x, y = 0.8), shape = 16, size = 2, color = "red") + 
   theme(panel.grid.major = element_blank()) + 
   scale_y_continuous(limits = c(0.5,1), expand = c(0.002, 0.002))
 
@@ -92,7 +88,7 @@ plot_hybrid <- ggplot(combination_df %>% filter(immune_type == "hybrid-induced")
                       aes(x = S_num_S1, y = pred, group = age_category, color = age_category)) +
   geom_line(linewidth = 1) +  
   labs(x = "S antibody from surveillance", y = "Probability of Remaining Free from Infection") +
-  ggtitle("Hybrid-induced") + 
+  ggtitle("Hybrid-induced (Undetected infection included)") + 
   theme_bw() +
   ylim(0.5, 1) +
   theme(legend.position = "none", 
@@ -111,6 +107,77 @@ shared_legend <- get_legend(plot_vac1 + theme(legend.position = "right"))
 final_plot <- plot_grid(plot_hybrid1, plot_vac1, shared_legend, ncol = 3, rel_widths = c(1, 1, 0.2))
 final_plot
 
-ggsave("Results/plots_updated/mixed_effect_model(conservative_version).pdf", plot = final_plot, width = 12, height = 6)
+ggsave("Results/plots_updated/mixed_effect_model(all).pdf", plot = final_plot, width = 12, height = 6)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# looked into undetected cases 
+undetected.url <-"Code/TempData/undetected_cases.rds"
+Cox_Hazard.url <- "Code/TempData/cox_hazard_data.rds"
+
+
+df.vac.undetected <- readRDS(undetected.url) %>% select(GNO, S_num_S1) %>% mutate(group = "Unconfirmed_Infection")
+df.cox_hazard <- readRDS(Cox_Hazard.url)
+
+df.vac.detected <- df.cox_hazard %>% 
+  filter(immune_type == "vac-induced") %>% 
+  filter(between_S1_S2_infec_cat == "yes") %>% 
+  select(GNO, S_num_S1) %>% mutate(group = "Confirmed_Infection")
+
+df.vac.noinfec <- df.cox_hazard %>% 
+  filter(immune_type == "vac-induced") %>% 
+  filter(between_S1_S2_infec_cat == "no") %>% 
+  filter(!(GNO %in% df.vac.undetected$GNO)) %>% 
+  select(GNO, S_num_S1) %>% mutate(group = "No_Infection")
+
+df.vac.infec <- rbind(df.vac.undetected, df.vac.detected) %>% mutate(group = "Confirmed_and_Unconfirmed_Infection")
+
+
+# Combine the two dataframes into one
+df_combined <- bind_rows(df.vac.undetected, df.vac.detected, df.vac.noinfec, df.vac.infec)
+df_combined$group <- factor(df_combined$group, 
+                            levels = c("Confirmed_Infection", 
+                                       "Unconfirmed_Infection", 
+                                       "Confirmed_and_Unconfirmed_Infection", 
+                                       "No_Infection"))
+
+
+plot <- ggplot(df_combined, aes(x = group, y = S_num_S1, fill = group)) +
+  geom_boxplot(width = 0.3) +  
+  theme_bw() +
+  labs(x = "", y = "S antibody level") +
+  scale_x_discrete(labels = c(
+    "Confirmed Infection", 
+    "Unconfirmed Infection", 
+    "Confirmed and Unconfirmed Infection", 
+    "No Infection"
+  )) +
+  stat_summary(fun.data = function(x) {
+    return(c(y = min(x) - 1, label = length(x)))  # Adjust position and show count
+  }, geom = "text", size = 4, vjust = 1.5) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+ggsave("Results/plots_updated/detected_undetected_compare.pdf", plot = plot, width = 6, height = 6)
+
+
+
+
+
+
+
+
 
 

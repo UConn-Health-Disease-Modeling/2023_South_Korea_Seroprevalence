@@ -292,6 +292,13 @@ regression_data <- cox_hazard_data
 
 # regression_data |> filter(N_cha_S1 == "Nonreactive" & N_cha_S2 == "Reactive") |> dim()
 # regression_data |> filter(N_cha_S1 == "Nonreactive" & N_cha_S2 == "Reactive" & between_S1_S2_infec_cat == "yes") |> dim()
+
+# get the undeteced cases 
+# undetected <- regression_data |> 
+#   filter(N_cha_S1 == "Nonreactive" & N_cha_S2 == "Reactive" & between_S1_S2_infec_cat == "no")
+# undetected.url <- "Code/TempData/undetected_cases.rds"
+# saveRDS(undetected, undetected.url)
+
 regression_data$between_S1_S2_infec_cat[regression_data$N_cha_S1 == "Nonreactive" & regression_data$N_cha_S2 == "Reactive"] <- "yes"
 
 
