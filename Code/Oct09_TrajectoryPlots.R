@@ -271,16 +271,36 @@ plot6 <- ggplot(plot_df.avg, aes(x = latest_immunology_cat, y = mean_S_ab)) +
   labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
   theme(panel.grid.major = element_blank())
 
+plot_df.avg_hybrid$`Immune Type` <- "Hybrid-induced"
+plot_df.avg_vac$`Immune Type` <- "Vaccine-induced"
+
+
+plot_df.avg <- rbind(plot_df.avg_hybrid, plot_df.avg_vac)
+
+plot7 <- ggplot(plot_df.avg, aes(x = latest_immunology_cat, y = mean_S_ab.avg, group = `Immune Type`)) +
+  geom_point(aes(color = `Immune Type`), size = 3) +
+  geom_line(aes(group = `Immune Type`, color = `Immune Type`)) + 
+  scale_color_manual(values = c("Hybrid-induced" = "#0000FF", 
+                                "Vaccine-induced" = "#DC143C")) + 
+  theme_bw() + 
+  theme(legend.position = c(0.95, 0.95),
+        legend.justification = c("right", "top"),
+        plot.title = element_blank()) +  # Remove individual titles
+  ylim(0, 25000) +
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
+  theme(panel.grid.major = element_blank())
+
+
 
 # Combine the four plots, with "Hybrid-induced" on the left and "Vaccine-induced" on the right, titles at the top
 combined_plot <- grid.arrange(
-  arrangeGrob(plot5, plot6, ncol = 1, top = textGrob("Hybrid & Vaccine Combined", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
-  arrangeGrob(plot3, plot1, ncol = 1, top = textGrob("Hybrid-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
-  arrangeGrob(plot4, plot2, ncol = 1, top = textGrob("Vaccine-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
+  arrangeGrob(plot7, ncol = 1, top = textGrob("Hybrid v.s. Vaccine-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
+  arrangeGrob(plot1, ncol = 1, top = textGrob("Hybrid-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
+  arrangeGrob(plot2, ncol = 1, top = textGrob("Vaccine-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
   ncol = 3
 )
 
 
 
 
-ggsave("Results/plots_updated/fig2_complete.pdf", plot = combined_plot, width = 15, height = 8)
+ggsave("Results/plots_updated/fig2_complete.pdf", plot = combined_plot, width = 15, height = 5)
