@@ -135,6 +135,7 @@ library(openxlsx)
 library(forestplot)
 library(dplyr)
 library(readxl)
+library(openxlsx)
 
 # Load the data (you might already have it loaded)
 url <- "Code/TempData/Oct13_forest_data(undetected).xlsx"
@@ -184,7 +185,7 @@ create_forestplot <- function(data, title) {
     is.summary = summary_rows,  # Mark summary rows to bold
     xlog = FALSE,
     clip = c(0.1, 5),  # x-axis limits
-    col = forestplot::fpColors(box = "royalblue", line = "darkblue", summary = "royalblue"),
+    col = forestplot::fpColors(box = "#DC143C", line = "#800000", summary = "#DC143C"),
     zero = 1,  # Reference line
     title = title
   )

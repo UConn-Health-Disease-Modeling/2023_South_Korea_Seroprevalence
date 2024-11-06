@@ -203,10 +203,12 @@ plot1 <- ggplot(plot_df_hybrid, aes(x = latest_immunology_cat, y = mean_S_ab)) +
   theme_bw() + 
   theme(legend.position = c(0.95, 0.95),
         legend.justification = c("right", "top"),
-        plot.title = element_blank()) +  # Remove individual titles
-  ylim(0, 25000) +
-  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
-  theme(panel.grid.major = element_blank())
+        plot.title = element_blank(),
+        panel.grid.major.x = element_blank()) +  # Remove vertical grid lines
+  scale_y_continuous(limits = c(0, 25000), breaks = seq(5000, 25000, 5000)) + 
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level")
+
+
 
 # Plot 2: Vaccine-induced group (individual points and lines)
 plot2 <- ggplot(plot_df_vac, aes(x = latest_immunology_cat, y = mean_S_ab)) +
@@ -219,10 +221,10 @@ plot2 <- ggplot(plot_df_vac, aes(x = latest_immunology_cat, y = mean_S_ab)) +
   theme_bw() + 
   theme(legend.position = c(0.95, 0.95),
         legend.justification = c("right", "top"),
-        plot.title = element_blank()) +  # Remove individual titles
-  ylim(0, 25000) +
-  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
-  theme(panel.grid.major = element_blank())
+        plot.title = element_blank(),
+        panel.grid.major.x = element_blank()) +  # Remove vertical grid lines
+  scale_y_continuous(limits = c(0, 25000), breaks = seq(5000, 25000, 5000)) + 
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") 
 
 # Plot 3: Hybrid-induced group (average line)
 plot3 <- ggplot(plot_df.avg_hybrid, aes(x = latest_immunology_cat, y = mean_S_ab.avg, group = 1)) +  
@@ -285,22 +287,27 @@ plot7 <- ggplot(plot_df.avg, aes(x = latest_immunology_cat, y = mean_S_ab.avg, g
   theme_bw() + 
   theme(legend.position = c(0.95, 0.95),
         legend.justification = c("right", "top"),
-        plot.title = element_blank()) +  # Remove individual titles
-  ylim(0, 25000) +
-  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") + 
-  theme(panel.grid.major = element_blank())
+        plot.title = element_blank(),
+        panel.grid.major.x = element_blank()) +  # Remove vertical grid lines
+  scale_y_continuous(limits = c(0, 25000), breaks = seq(5000, 25000, 5000)) + 
+  labs(x = "Time Since the Latest Immunology (month)", y = "S Antibody Level") +
+  geom_vline(xintercept = 12, linetype = "dashed", color = "black")  # Add vertical dashed line
+
 
 
 
 # Combine the four plots, with "Hybrid-induced" on the left and "Vaccine-induced" on the right, titles at the top
 combined_plot <- grid.arrange(
   arrangeGrob(plot7, ncol = 1, top = textGrob("Hybrid v.s. Vaccine-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
-  arrangeGrob(plot1, ncol = 1, top = textGrob("Hybrid-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
-  arrangeGrob(plot2, ncol = 1, top = textGrob("Vaccine-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
-  ncol = 3
+  arrangeGrob(
+    arrangeGrob(plot1, top = textGrob("Hybrid-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
+    arrangeGrob(plot2, top = textGrob("Vaccine-induced", gp = gpar(fontsize = 18, fontface = "bold"), hjust = 0.5)),
+    ncol = 2
+  ),
+  nrow = 2
 )
 
 
 
 
-ggsave("Results/plots_updated/fig2_complete.pdf", plot = combined_plot, width = 15, height = 5)
+ggsave("Results/plots_updated/fig2_complete.pdf", plot = combined_plot, width = 10, height = 8)

@@ -110,6 +110,9 @@ data$age_category <- factor(data$age_category, levels = c("<20", "20-40", "40-60
 aft_model <- survreg(Surv(time / 30, status) ~ immune_type, data = data, dist = "loglogistic")
 summary(aft_model)
 
+
+data$sex <- factor(data$sex, levels = c("Male", "Female"))
+data$immune_type <- factor(data$immune_type, levels = c("hybrid-induced", "vac-induced"))
 # AFT model for sex7
 aft_model <- survreg(Surv(time / 30, status) ~ sex*strata(immune_type), data = data, dist = "loglogistic")
 summary(aft_model)
@@ -121,3 +124,7 @@ summary(aft_model)
 # Adjusted AFT model for immune_type, sex, and age_category
 aft_model <- survreg(Surv(time / 30, status) ~ strata(immune_type)*sex + strata(immune_type)*age_category, data = data, dist = "loglogistic")
 summary(aft_model)
+
+
+data$sex
+data$age_category

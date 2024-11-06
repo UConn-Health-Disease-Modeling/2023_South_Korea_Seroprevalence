@@ -268,7 +268,14 @@ cox_hazard_data <- cox_hazard_data |>
     )
   )
 cox_hazard_data$latest_immunology_cat <- factor(cox_hazard_data$latest_immunology_cat, levels = c("<1 month", "1-6 months", "6-12 months", ">1 year"))
-  
+
+cox_hazard_data <- cox_hazard_data |> mutate(age_cat = case_when(
+  age_base < 20 ~ "<20",
+  age_base >= 20 & age_base <= 40 ~ "20-40",
+  age_base > 40 & age_base <= 60 ~ "40-60",
+  age_base > 60 ~ ">60"
+))
+
 cox_hazard_data.vac    <- cox_hazard_data |> filter(immune_type == "vac-induced")
 cox_hazard_data.hybrid <- cox_hazard_data |> filter(immune_type == "hybrid-induced")
 
@@ -281,9 +288,10 @@ cox_hazard_data.hybrid$age_cat |> table()
 # 
 # cox_hazard_data <- readRDS(Cox_Hazard.url)
 
+wilcox.test(cox_hazard_data.vac$vac_before_S1_freq, cox_hazard_data.hybrid$vac_before_S1_freq)
 
-
-
+cox_hazard_data.vac.infec <- cox_hazard_data.vac %>% filter(between_S1_S2_infec_cat == "yes")
+table(cox_hazard_data.vac.infec$age_cat, cox_hazard_data.vac.infec$hosp.S2)
 
 
 
