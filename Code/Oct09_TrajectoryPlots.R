@@ -45,12 +45,12 @@ df$immune_type2 <- factor(df$immune_type2, levels = c("hybrid-induced", "vac-ind
 
 df <- df |> mutate(age_cat = case_when(
   age_base < 20 ~ "<20",
-  age_base >= 20 & age_base <= 40 ~ "20-40",
-  age_base > 40 & age_base <= 60 ~ "40-60",
+  age_base >= 20 & age_base <= 40 ~ "20-39",
+  age_base > 40 & age_base <= 60 ~ "40-59",
   age_base > 60 ~ ">60"
 ))
 
-df$age_cat <- factor(df$age_cat, levels = c("<20", "20-40", "40-60", ">60"))
+df$age_cat <- factor(df$age_cat, levels = c("<20", "20-39", "40-59", ">60"))
 
 # table(df$immune_type2)
 # # hybrid-induced    vac-induced 
@@ -169,8 +169,8 @@ df <- readRDS(url)
 
 # Define the colors for the groups
 colors <- c("#ADD8E6", "#6495ED", "#0000FF", "#191970", "#FFA07A", "#FF6347", "#DC143C", "#800000")
-labels <- c("hybrid-induced, <20", "hybrid-induced, 20-40", "hybrid-induced, 40-60", "hybrid-induced, >60",
-            "vac-induced, <20", "vac-induced, 20-40", "vac-induced, 40-60", "vac-induced, >60")
+labels <- c("hybrid-induced, <20", "hybrid-induced, 20-39", "hybrid-induced, 40-59", "hybrid-induced, >60",
+            "vac-induced, <20", "vac-induced, 20-39", "vac-induced, 40-59", "vac-induced, >60")
 
 plot_df <- plot_data(df)
 # plot_df <- plot_data(df3)
@@ -197,8 +197,8 @@ plot1 <- ggplot(plot_df_hybrid, aes(x = latest_immunology_cat, y = mean_S_ab)) +
   geom_point(aes(color = age), size = 3) +
   geom_line(aes(group = age, color = age)) + 
   scale_color_manual(values = c("<20" = "#ADD8E6", 
-                                "20-40" = "#6495ED", 
-                                "40-60" = "#0000FF", 
+                                "20-39" = "#6495ED", 
+                                "40-59" = "#0000FF", 
                                 ">60" = "#00008B")) + 
   theme_bw() + 
   theme(legend.position = c(0.95, 0.95),
@@ -215,8 +215,8 @@ plot2 <- ggplot(plot_df_vac, aes(x = latest_immunology_cat, y = mean_S_ab)) +
   geom_point(aes(color = age), size = 3) +
   geom_line(aes(group = age, color = age)) + 
   scale_color_manual(values = c("<20" = "#FFA07A", 
-                                "20-40" = "#FF6347", 
-                                "40-60" = "#DC143C", 
+                                "20-39" = "#FF6347", 
+                                "40-59" = "#DC143C", 
                                 ">60" = "#800000")) + 
   theme_bw() + 
   theme(legend.position = c(0.95, 0.95),
@@ -262,8 +262,8 @@ plot6 <- ggplot(plot_df.avg, aes(x = latest_immunology_cat, y = mean_S_ab)) +
   geom_point(aes(color = age), size = 3) +
   geom_line(aes(group = age, color = age)) + 
   scale_color_manual(values = c("<20" = "#90EE90", 
-                                "20-40" = "#3CB371", 
-                                "40-60" = "#228B22", 
+                                "20-39" = "#3CB371", 
+                                "40-59" = "#228B22", 
                                 ">60" = "#006400")) + 
   theme_bw() + 
   theme(legend.position = c(0.95, 0.95),

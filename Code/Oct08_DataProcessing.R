@@ -200,7 +200,10 @@ S_12 <- S_12 |>
 
 
 # flow chart excluding criteria 1: excluding those with vaccination during S1 and S2 
-S_12.v2 <- S_12 |> filter(between_S1_S2_vac_cat == "no")
+# S_12.v2 <- S_12 |> filter(between_S1_S2_vac_cat == "no")
+S_12$vac_between_S1_infec <- ifelse(S_12$vac_gap_after_S1 <= S_12$infec_gap_after_S1, "yes", "no")
+S_12$vac_between_S1_infec[is.na(S_12$vac_between_S1_infec)] <- "no"
+S_12.v2 <- S_12 %>% filter(vac_between_S1_infec != "yes")
 
 # dim(S_12)[1] - dim(S_12.v2)[1] # number of exclusion 1 
 
@@ -209,6 +212,10 @@ S_12.v2 <- S_12.v2 |> mutate(immune_type = ifelse(group1 == 4, "naive",
                                                          ifelse(group1 == 2, "inf-induced",
                                                                 ifelse(group1 == 1, "hybrid-induced", NA)))))
 S_12.v2$immune_type <- factor(S_12.v2$immune_type, levels = c("hybrid-induced", "vac-induced", "inf-induced", "naive"))
+
+# table(S_12.v2$immune_type)
+# hybrid-induced    vac-induced    inf-induced          naive 
+#           5316           4174             26            174 
 
 S_12.vac    <- S_12.v2 |> filter(immune_type == "vac-induced") |> filter(vac_before_S1_freq > 0)
 S_12.hybrid <- S_12.v2 |> filter(immune_type == "hybrid-induced") |> filter(vac_before_S1_freq > 0)
@@ -275,12 +282,18 @@ cox_hazard_data <- cox_hazard_data |> mutate(age_cat = case_when(
   age_base > 40 & age_base <= 60 ~ "40-60",
   age_base > 60 ~ ">60"
 ))
+cox_hazard_data$age_cat <- factor(cox_hazard_data$age_cat, levels = c("<20", "20-40", "40-60", ">60"))
 
 cox_hazard_data.vac    <- cox_hazard_data |> filter(immune_type == "vac-induced")
 cox_hazard_data.hybrid <- cox_hazard_data |> filter(immune_type == "hybrid-induced")
 
 # fill the table1 
-cox_hazard_data.hybrid$age_cat |> table()
+table(cox_hazard_data.vac$age_cat)
+# 4688+4069+759+174+255
+# 4688/(9945-255)
+
+
+
 
 # # save cox hazad data
 # Cox_Hazard.url <- "Code/TempData/cox_hazard_data.rds"
@@ -290,8 +303,8 @@ cox_hazard_data.hybrid$age_cat |> table()
 
 wilcox.test(cox_hazard_data.vac$vac_before_S1_freq, cox_hazard_data.hybrid$vac_before_S1_freq)
 
-cox_hazard_data.vac.infec <- cox_hazard_data.vac %>% filter(between_S1_S2_infec_cat == "yes")
-table(cox_hazard_data.vac.infec$age_cat, cox_hazard_data.vac.infec$hosp.S2)
+cox_hazard_data.hybrid.infec <- cox_hazard_data.hybrid %>% filter(between_S1_S2_infec_cat == "yes")
+table(cox_hazard_data.hybrid.infec$age_cat, cox_hazard_data.hybrid.infec$hosp.S2)
 
 
 

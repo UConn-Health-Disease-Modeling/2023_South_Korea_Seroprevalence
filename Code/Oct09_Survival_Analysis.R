@@ -93,7 +93,6 @@ p1 <- ggsurv$plot +
 
 p2 <- ggsurv$table +
   theme(legend.position = "none") + theme(plot.margin=grid::unit(c(0,0,0,0), "mm"))
-# ggsurv$ncensor.plot
 # ggsave("Results/plots_updated/fig3(2).pdf", plot = p2, width = 10, height = 1)
 
 
@@ -125,6 +124,3 @@ summary(aft_model)
 aft_model <- survreg(Surv(time / 30, status) ~ strata(immune_type)*sex + strata(immune_type)*age_category, data = data, dist = "loglogistic")
 summary(aft_model)
 
-
-data$sex
-data$age_category
