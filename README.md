@@ -34,5 +34,3 @@ Evaluating risk after an Omicron wave is particularly challenging due to a high 
 ## Conclusions
 
 Operational definitions of infection significantly affect incidence estimates. Including serologically inferred infections reveals a much larger infection burden, especially in those with recent infections or hybrid immunity. Surveillance and interventions (e.g., updated boosters) should prioritize middle-aged and vulnerable individuals who may experience undetected infections due to slower antibody responses or faster waning.
-
-## Repository Structure
