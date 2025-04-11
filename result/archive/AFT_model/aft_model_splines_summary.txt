@@ -1,0 +1,28 @@
+
+Call:
+survreg(formula = Surv(time, status) ~ strata(immune_type) * 
+    (sex + age_category), data = data, dist = "loglogistic")
+                                                   Value Std. Error     z       p
+(Intercept)                                       3.3440     0.1846 18.11 < 2e-16
+sexFemale                                        -0.2262     0.0663 -3.41 0.00065
+age_category>60                                  -0.6222     0.1735 -3.59 0.00033
+age_category20-40                                -0.4604     0.1780 -2.59 0.00968
+age_category40-60                                -0.4656     0.1740 -2.68 0.00745
+sexMale:strata(immune_type)vac-induced           -1.5008     0.2454 -6.12 9.6e-10
+sexFemale:strata(immune_type)vac-induced         -1.6217     0.2399 -6.76 1.4e-11
+age_category>60:strata(immune_type)vac-induced    1.1657     0.2382  4.89 9.9e-07
+age_category20-40:strata(immune_type)vac-induced  0.9761     0.2510  3.89 0.00010
+age_category40-60:strata(immune_type)vac-induced  0.7585     0.2407  3.15 0.00162
+hybrid-induced                                   -0.2584     0.0375 -6.89 5.5e-12
+vac-induced                                       0.0627     0.0251  2.50 0.01240
+
+Scale:
+hybrid-induced    vac-induced 
+         0.772          1.065 
+
+Log logistic distribution
+Loglik(model)= -7082.7   Loglik(intercept only)= -7156.2
+	Chisq= 146.94 on 9 degrees of freedom, p= 3.8e-27 
+Number of Newton-Raphson Iterations: 5 
+n= 8757 
+

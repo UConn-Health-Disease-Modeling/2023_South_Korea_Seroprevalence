@@ -1,0 +1,52 @@
+
+Call:
+survreg(formula = Surv(time, status) ~ immune_type * sex + immune_type * 
+    age_category + immune_type * latest_immunology_cat, data = data, 
+    dist = "weibull")
+                                                          Value Std. Error     z       p
+(Intercept)                                              2.9947     0.2329 12.86 < 2e-16
+immune_typevac-induced                                  -1.2912     0.2733 -4.72 2.3e-06
+immune_typeinf-induced                                       NA     0.0000    NA      NA
+immune_typenaive                                             NA     0.0000    NA      NA
+sexFemale                                               -0.2518     0.0832 -3.03 0.00248
+age_category>60                                         -0.6466     0.2235 -2.89 0.00382
+age_category20-40                                       -0.5317     0.2296 -2.32 0.02060
+age_category40-60                                       -0.4418     0.2253 -1.96 0.04985
+latest_immunology_cat1-6 months                          1.2456     0.0972 12.81 < 2e-16
+latest_immunology_cat6-12 months                         1.0498     0.1179  8.90 < 2e-16
+latest_immunology_cat>1 year                             0.1696     0.7422  0.23 0.81930
+latest_immunology_catno_event                                NA     0.0000    NA      NA
+immune_typevac-induced:sexFemale                        -0.0381     0.1014 -0.38 0.70693
+immune_typeinf-induced:sexFemale                             NA     0.0000    NA      NA
+immune_typenaive:sexFemale                                   NA     0.0000    NA      NA
+immune_typevac-induced:age_category>60                   1.0773     0.2588  4.16 3.1e-05
+immune_typeinf-induced:age_category>60                       NA     0.0000    NA      NA
+immune_typenaive:age_category>60                             NA     0.0000    NA      NA
+immune_typevac-induced:age_category20-40                 0.9765     0.2696  3.62 0.00029
+immune_typeinf-induced:age_category20-40                     NA     0.0000    NA      NA
+immune_typenaive:age_category20-40                           NA     0.0000    NA      NA
+immune_typevac-induced:age_category40-60                 0.7291     0.2607  2.80 0.00517
+immune_typeinf-induced:age_category40-60                     NA     0.0000    NA      NA
+immune_typenaive:age_category40-60                           NA     0.0000    NA      NA
+immune_typevac-induced:latest_immunology_cat1-6 months  -0.7192     0.1322 -5.44 5.3e-08
+immune_typeinf-induced:latest_immunology_cat1-6 months       NA     0.0000    NA      NA
+immune_typenaive:latest_immunology_cat1-6 months             NA     0.0000    NA      NA
+immune_typevac-induced:latest_immunology_cat6-12 months -0.6984     0.1431 -4.88 1.1e-06
+immune_typeinf-induced:latest_immunology_cat6-12 months      NA     0.0000    NA      NA
+immune_typenaive:latest_immunology_cat6-12 months            NA     0.0000    NA      NA
+immune_typevac-induced:latest_immunology_cat>1 year      0.5438     0.8802  0.62 0.53668
+immune_typeinf-induced:latest_immunology_cat>1 year          NA     0.0000    NA      NA
+immune_typenaive:latest_immunology_cat>1 year                NA     0.0000    NA      NA
+immune_typevac-induced:latest_immunology_catno_event         NA     0.0000    NA      NA
+immune_typeinf-induced:latest_immunology_catno_event         NA     0.0000    NA      NA
+immune_typenaive:latest_immunology_catno_event               NA     0.0000    NA      NA
+Log(scale)                                               0.0430     0.0214  2.01 0.04451
+
+Scale= 1.04 
+
+Weibull distribution
+Loglik(model)= -7011.4   Loglik(intercept only)= -7369.6
+	Chisq= 716.31 on 35 degrees of freedom, p= 4.8e-128 
+Number of Newton-Raphson Iterations: 8 
+n= 8757 
+

@@ -1,0 +1,427 @@
+
+title: "**Seroprevalence Project (Appendix)**"
+author: 
+  - "Franky Zhang"
+  - "Supervisor: Jo Youngji"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(lubridate)
+# list.files()
+
+# ------------------------------------------------------------------------------
+summary_table <- function(df, category = "age_category") {
+  
+  # Convert the category string to a symbol for tidy evaluation
+  cat_sym <- sym(category)
+  
+  # Overall summary by the given category
+  overall_table <- df %>%
+    group_by(!!cat_sym) %>%
+    summarise(
+      count_overall = n(),
+      total_wgt = sum(wgt_1ag, na.rm = TRUE)
+    ) %>%
+    ungroup() %>%
+    mutate(
+      prop = round(count_overall / sum(count_overall) * 100, 1),
+      wgt_prop = paste0(sprintf("(%0.1f)", total_wgt / sum(total_wgt) * 100))
+    ) %>%
+    select(!!cat_sym, count_overall, prop, wgt_prop)
+  
+  # Summary for "hybrid-induced"
+  hybrid_table <- df %>%
+    filter(immune_type == "hybrid-induced") %>%
+    group_by(!!cat_sym) %>%
+    summarise(
+      count_hybrid = n(),
+      total_wgt = sum(wgt_1ag, na.rm = TRUE)
+    ) %>%
+    ungroup() %>%
+    mutate(
+      prop_hybrid = round(count_hybrid / sum(count_hybrid) * 100, 1),
+      wgt_prop_hybrid = paste0(sprintf("(%0.1f)", total_wgt / sum(total_wgt) * 100))
+    ) %>%
+    select(!!cat_sym, count_hybrid, prop_hybrid, wgt_prop_hybrid)
+  
+  # Summary for "vac-induced"
+  vac_table <- df %>%
+    filter(immune_type == "vac-induced") %>%
+    group_by(!!cat_sym) %>%
+    summarise(
+      count_vac = n(),
+      total_wgt = sum(wgt_1ag, na.rm = TRUE)
+    ) %>%
+    ungroup() %>%
+    mutate(
+      prop_vac = round(count_vac / sum(count_vac) * 100, 1),
+      wgt_prop_vac = paste0(sprintf("(%0.1f)", total_wgt / sum(total_wgt) * 100))
+    ) %>%
+    select(!!cat_sym, count_vac, prop_vac, wgt_prop_vac)
+  
+  # Merge the overall and immune type-specific summaries by the category column.
+  final_table <- overall_table %>%
+    left_join(hybrid_table, by = category) %>%
+    left_join(vac_table, by = category)
+  
+  return(final_table)
+}
+
+
+
+# ------------------------------------------------------------------------------
+process_data <- function(data) {
+  data$BMI <- data$weight / ((data$height / 100)^2)
+  
+  data$BMI_cat <- cut(
+    data$BMI,
+    breaks = c(-Inf, 18.5, 24.9, Inf),
+    labels = c("Low", "Normal", "Obesity"),
+    include.lowest = TRUE
+  )
+  
+  data$age_category <- factor(
+    data$age_category, 
+    levels = c("<20", "20-40", "40-60", ">60")
+  )
+  
+  data$cat_diseases_S1 <- ifelse(data$num_diseases_S1 == 0, "none",
+                            ifelse(data$num_diseases_S1 == 1, "1",
+                              ifelse(data$num_diseases_S1 == 2, "2", ">=3")))
+  
+  # data$latest_immunology_cat <- factor(
+  #   data$latest_immunology_cat, 
+  #   levels = c("no_event", "<1 month", "1-6 months", "6-12 months", ">1 year")
+  # )
+  
+  data$latest_immunology_cat <- factor(
+    data$latest_immunology_cat, 
+    levels = c(">1 year", "6-12 months", "1-6 months", "<1 month", "no_event")
+  )
+  
+  data$cat_diseases_S1 <- factor(
+    data$cat_diseases_S1,
+    levels = c("none", "1", "2", ">=3")
+  )
+  
+  data$vac_dose <- ifelse(data$vac_before_S1_freq < 3, "primary_dose",
+                          as.character(data$vac_before_S1_freq))
+  
+  data$vac_dose <- factor(
+    data$vac_dose,
+    levels = c("primary_dose", "3", "4")
+  )
+  
+  data$sex <- factor(
+    data$sex, 
+    levels = c("Male", "Female")
+  )
+  
+  return(data)
+}
+
+
+
+# ------------------------------------------------------------------------------
+summarize_categorical_distribution <- function(data, vars, status_value = 1, immune_type_value, weight_col = "wgt_1ag") {
+  # Filter based on status and immune_type
+  filtered_data <- data %>%
+    filter(status == status_value, immune_type == immune_type_value)
+
+  # Loop through each variable and compute weighted proportions
+  summary_df <- map_dfr(vars, function(var) {
+    grouped <- filtered_data %>%
+      group_by(across(all_of(var))) %>%
+      summarise(
+        count = n(),
+        weighted_sum = sum(.data[[weight_col]], na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      mutate(
+        variable = var,
+        prop_weighted = round(weighted_sum / sum(weighted_sum, na.rm = TRUE), 3)
+      ) %>%
+      rename(category = !!sym(var)) %>%
+      select(variable, category, count, prop_weighted)
+    
+    return(grouped)
+  })
+
+  return(summary_df)
+}
+```
+
+
+# calculate the summary tables 
+
+```{r}
+url <- list(
+  summary_data = "TempData/summary_data.rds", 
+  data_Nstatus = "TempData/data_Nstatus.rds", 
+  data_KDCA = "TempData/data_KDCA.rds"
+)
+
+data_KDCA    <- readRDS(url$data_KDCA) %>% process_data()
+data_Nstatus <- readRDS(url$data_Nstatus) %>% process_data()
+
+Nstatus_infec <- data_Nstatus %>% filter(status == 1)
+KDCA_infec    <- data_KDCA    %>% filter(status == 1)
+Nstatus_infec_pure <- Nstatus_infec %>% filter(!(GNO %in% KDCA_infec$GNO))
+
+
+
+# draw the summary table 
+vars_to_tabulate <- c("age_category", "sex", "BMI_cat", 
+                      "cat_diseases_S1", "latest_immunology_cat", "vac_dose")
+
+conservative_hybrid <- summarize_categorical_distribution(
+  data = data_KDCA,
+  vars = vars_to_tabulate,
+  immune_type_value = "hybrid-induced"
+)
+
+conservative_vaccine <- summarize_categorical_distribution(
+  data = data_KDCA,
+  vars = vars_to_tabulate,
+  immune_type_value = "vac-induced"
+)
+
+inclusive_hybrid <- summarize_categorical_distribution(
+  data = data_Nstatus,
+  vars = vars_to_tabulate,
+  immune_type_value = "hybrid-induced"
+)
+
+inclusive_vaccine <- summarize_categorical_distribution(
+  data = data_Nstatus,
+  vars = vars_to_tabulate,
+  immune_type_value = "vac-induced"
+)
+
+pure_unconf_hybrid <- summarize_categorical_distribution(
+  data = Nstatus_infec_pure,
+  vars = vars_to_tabulate,
+  immune_type_value = "hybrid-induced"
+)
+
+pure_unconf_vaccine <- summarize_categorical_distribution(
+  data = Nstatus_infec_pure,
+  vars = vars_to_tabulate,
+  immune_type_value = "vac-induced"
+)
+
+# Combine into a named list of tibbles
+all_summaries <- list(
+  conservative_hybrid    = conservative_hybrid,
+  conservative_vaccine   = conservative_vaccine,
+  inclusive_hybrid       = inclusive_hybrid,
+  inclusive_vaccine      = inclusive_vaccine,
+  pure_unconf_hybrid     = pure_unconf_hybrid,
+  pure_unconf_vaccine    = pure_unconf_vaccine
+)
+
+library(writexl)
+# Write to one Excel file with each tibble as a sheet
+# write_xlsx(all_summaries, path = "../summary_tables.xlsx")
+
+sample1 <- c(821, 2550, 903)
+sample2 <- c(62 ,3915, 761)
+
+data_mat <- rbind(sample1, sample2)
+
+chisq.test(data_mat)
+
+
+ #  821      62 
+ #  2,550    3,915 
+ #  903      761 
+```
+
+# draw the comparison bar plots 
+
+```{r}
+# Define colors based on the image
+color_conservative <- "#AFC8E6"  # Light blue
+color_inclusive <- "#F7D6C1"    # Peach/orange
+
+plot_weighted_bar <- function(conservative_data, inclusive_data, category_var, main_title) {
+  # Define colors (vibrant based on your request)
+  color_conservative <- "#AFC8E6"  # More vibrant blue  
+  color_inclusive <- "#F7D6C1"    # More vibrant peach/orange  
+
+  # Add group labels
+  conservative_data$group <- "Conservative"
+  inclusive_data$group <- "Inclusive"
+
+  # Filter for the selected category variable
+  ch_filtered <- conservative_data[conservative_data$variable == category_var, ]
+  ih_filtered <- inclusive_data[inclusive_data$variable == category_var, ]
+
+  # Sort categories for consistency
+  ch_filtered <- ch_filtered[order(ch_filtered$category), ]
+  ih_filtered <- ih_filtered[order(ih_filtered$category), ]
+
+  # Combine proportions into a matrix for barplot
+  bar_mat <- rbind(ch_filtered$prop_weighted, ih_filtered$prop_weighted)
+  colnames(bar_mat) <- as.character(ch_filtered$category)
+  rownames(bar_mat) <- c("Conservative", "Inclusive")
+
+  # Create the bar plot
+  barplot(bar_mat,
+          beside = TRUE,
+          col = c(color_conservative, color_inclusive),  # Apply colors
+          ylim = c(0, max(bar_mat) * 1.2),
+          xlab = "",
+          ylab = "Weighted Proportion (%)",
+          main = main_title,
+          legend.text = TRUE,
+          args.legend = list(x = "topright", bty = "n"))
+}
+
+
+
+# Save to a PNG file
+png("../result/plots/weighted_barplots.png", width = 1200, height = 1200, res = 150)
+
+# Set up a 3x2 layout for the plots
+par(mfrow = c(3, 2), mar = c(5, 5, 4, 2))  # Adjust margins for readability
+
+# Plot 1: Hybrid-induced - Age
+plot_weighted_bar(
+  conservative_data = conservative_hybrid,
+  inclusive_data = inclusive_hybrid,
+  category_var = "age_category",
+  main_title = "Hybrid-induced"
+)
+mtext("Age", side = 1, line = 3)
+
+# Plot 2: Vaccine-induced - Age
+plot_weighted_bar(
+  conservative_data = conservative_vaccine,
+  inclusive_data = inclusive_vaccine,
+  category_var = "age_category",
+  main_title = "Vaccine-induced"
+)
+mtext("Age", side = 1, line = 3)
+
+# Plot 3: Hybrid-induced - Time since most recent immunology
+plot_weighted_bar(
+  conservative_data = conservative_hybrid,
+  inclusive_data = inclusive_hybrid,
+  category_var = "latest_immunology_cat",
+  main_title = "Hybrid-induced"
+)
+mtext("Time since most recent immunology", side = 1, line = 3)
+
+# Plot 4: Vaccine-induced - Time since most recent immunology
+plot_weighted_bar(
+  conservative_data = conservative_vaccine,
+  inclusive_data = inclusive_vaccine,
+  category_var = "latest_immunology_cat",
+  main_title = "Vaccine-induced"
+)
+mtext("Time since most recent immunology", side = 1, line = 3)
+
+# Plot 5: Hybrid-induced - Vaccination before 1st wave
+plot_weighted_bar(
+  conservative_data = conservative_hybrid,
+  inclusive_data = inclusive_hybrid,
+  category_var = "vac_dose",
+  main_title = "Hybrid-induced"
+)
+mtext("Vaccination (before 1st wave)", side = 1, line = 3)
+
+# Plot 6: Vaccine-induced - Vaccination before 1st wave
+plot_weighted_bar(
+  conservative_data = conservative_vaccine,
+  inclusive_data = inclusive_vaccine,
+  category_var = "vac_dose",
+  main_title = "Vaccine-induced"
+)
+mtext("Vaccination (before 1st wave)", side = 1, line = 3)
+
+# Close the PNG file
+dev.off()
+
+```
+
+
+
+# cross categories overlapping comparison 
+
+```{r}
+url <- list(
+  summary_data = "TempData/summary_data.rds", 
+  data_Nstatus = "TempData/data_Nstatus.rds", 
+  data_KDCA = "TempData/data_KDCA.rds"
+)
+
+data_KDCA    <- readRDS(url$data_KDCA) %>% process_data()
+data_Nstatus <- readRDS(url$data_Nstatus) %>% process_data()
+library(ggplot2)
+data_Nstatus$age_category %>% levels()
+data_Nstatus$latest_immunology_cat %>% levels()
+
+
+
+# Save to PNG
+png("../result/plots/figS2(a).png", width = 2000, height = 800, res = 150)
+
+# Set 2x2 layout
+par(mfrow = c(1, 2), mar = c(2, 1, 1, 2))  # oma for outer margin
+
+# === Top row: KDCA ===
+
+# (1) KDCA hybrid-induced
+data <- data_KDCA %>% filter(immune_type == "hybrid-induced")
+mosaicplot(table(data$age_category, data$latest_immunology_cat),
+           color = TRUE,
+           main = "Age vs Immunological Events Gap (hybrid-induced)",
+           xlab = "Age", ylab = "Immunological Events Gap", 
+           las = 1)
+
+# (2) KDCA vac-induced
+data <- data_KDCA %>% filter(immune_type == "vac-induced")
+mosaicplot(table(data$age_category, data$latest_immunology_cat),
+           color = TRUE,
+           main = "Age vs Immunological Events Gap (vaccine-induced)",
+           xlab = "Age", ylab = "Immunological Events Gap", 
+           las = 1)
+
+dev.off()
+
+
+
+
+# === Bottom row: Nstatus ===
+png("../result/plots/figS2(b).png", width = 2000, height = 800, res = 150)
+par(mfrow = c(1, 2), mar = c(2, 1, 1, 2))  # oma for outer margin
+# (3) Nstatus hybrid-induced
+data <- data_Nstatus %>% filter(immune_type == "hybrid-induced")
+mosaicplot(table(data$age_category, data$latest_immunology_cat),
+           color = TRUE,
+           main = "Age vs Immunological Events Gap (hybrid-induced)",
+           xlab = "Age", ylab = "Immunological Events Gap", 
+           las = 1)
+
+# (4) Nstatus vac-induced
+data <- data_Nstatus %>% filter(immune_type == "vac-induced")
+mosaicplot(table(data$age_category, data$latest_immunology_cat),
+           color = TRUE,
+           main = "Age vs Immunological Events Gap (vaccine-induced)",
+           xlab = "Age", ylab = "Immunological Events Gap", 
+           las = 1)
+
+# Close PNG
+dev.off()
+```
+
+

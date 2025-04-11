@@ -1,0 +1,41 @@
+
+Call:
+survreg(formula = Surv(time, status) ~ strata(immune_type) * 
+    (sex + age_category + latest_immunology_cat + poly(time, 
+        2)), data = data, dist = "loglogistic")
+                                                                    Value Std. Error      z       p
+(Intercept)                                                      1.270226   0.031047  40.91 < 2e-16
+sexFemale                                                       -0.015216   0.011682  -1.30  0.1927
+age_category>60                                                 -0.037471   0.028807  -1.30  0.1933
+age_category20-40                                               -0.016176   0.029727  -0.54  0.5863
+age_category40-60                                               -0.002774   0.029234  -0.09  0.9244
+latest_immunology_cat1-6 months                                  0.092824   0.014273   6.50 7.8e-11
+latest_immunology_cat6-12 months                                 0.091563   0.017025   5.38 7.5e-08
+latest_immunology_cat>1 year                                     0.001042   0.092608   0.01  0.9910
+latest_immunology_catno_event                                          NA   0.000000     NA      NA
+poly(time, 2)1                                                  71.661778   0.861808  83.15 < 2e-16
+poly(time, 2)2                                                  -9.773796   0.470031 -20.79 < 2e-16
+sexMale:strata(immune_type)vac-induced                           0.095957   0.048237   1.99  0.0467
+sexFemale:strata(immune_type)vac-induced                         0.127390   0.048381   2.63  0.0085
+age_category>60:strata(immune_type)vac-induced                   0.006126   0.043188   0.14  0.8872
+age_category20-40:strata(immune_type)vac-induced                 0.018051   0.045633   0.40  0.6924
+age_category40-60:strata(immune_type)vac-induced                -0.000204   0.043758   0.00  0.9963
+latest_immunology_cat1-6 months:strata(immune_type)vac-induced  -0.007407   0.026400  -0.28  0.7790
+latest_immunology_cat6-12 months:strata(immune_type)vac-induced -0.051910   0.026115  -1.99  0.0468
+latest_immunology_cat>1 year:strata(immune_type)vac-induced      0.029562   0.145657   0.20  0.8392
+latest_immunology_catno_event:strata(immune_type)vac-induced           NA   0.000000     NA      NA
+poly(time, 2)1:strata(immune_type)vac-induced                    0.780823   1.078308   0.72  0.4690
+poly(time, 2)2:strata(immune_type)vac-induced                   -1.928737   0.665037  -2.90  0.0037
+hybrid-induced                                                  -2.273022   0.036817 -61.74 < 2e-16
+vac-induced                                                     -1.821026   0.024761 -73.54 < 2e-16
+
+Scale:
+hybrid-induced    vac-induced 
+         0.103          0.162 
+
+Log logistic distribution
+Loglik(model)= -1594.8   Loglik(intercept only)= -7156.2
+	Chisq= 11122.76 on 21 degrees of freedom, p= 0 
+Number of Newton-Raphson Iterations: 11 
+n= 8757 
+

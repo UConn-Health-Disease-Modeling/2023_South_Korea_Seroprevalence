@@ -1,0 +1,60 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[margin=0.5in]{geometry}  % 将页边距减小到0.5英寸
+
+\begin{document}
+	
+	\[
+	\begin{aligned}
+		\text{logit}\left(P(\text{Control})\right) &= 0.61 + 1.40 \times 10^{-4} \times S_{\text{ab}} + 0.58 \times \text{Age}_{20\text{-}40} + 0.29 \times \text{Age}_{40\text{-}60} - 0.10 \times \text{Age}_{>60} + \epsilon \\
+		\\
+		\text{logit}\left(P(\text{Control})_{\text{hybrid}}\right) &= 3.38 + 3.86 \times 10^{-5} \times S_{\text{ab}} + 0.64 \times \text{Age}_{20\text{-}40} - 0.01 \times \text{Age}_{40\text{-}60}  - 0.11 \times \text{Age}_{>60} \\
+		&\quad + \left(u_{0,\text{hybrid}} + u_{1,\text{hybrid}} \times S_{\text{ab}} + u_{2,\text{hybrid}} \times \text{Age}_{20\text{-}40} + u_{3,\text{hybrid}} \times \text{Age}_{40\text{-}60} + u_{4,\text{hybrid}} \times \text{Age}_{>60} \right) + \epsilon_{\text{hybrid}} \\
+		\\
+		\text{logit}\left(P(\text{Control})_{\text{vaccine}}\right) &= 0.20  + 4.47 \times 10^{-5} \times S_{\text{ab}} + 0.74 \times \text{Age}_{20\text{-}40} + 0.56 \times \text{Age}_{40\text{-}60} + 0.35 \times \text{Age}_{>60} \\
+		&\quad + \left(u_{0,\text{vac}} + u_{1,\text{vac}} \times S_{\text{ab}} + u_{2,\text{vac}} \times \text{Age}_{20\text{-}40} + u_{3,\text{vac}} \times \text{Age}_{40\text{-}60} + u_{4,\text{vac}} \times \text{Age}_{>60} \right) + \epsilon_{\text{vaccine}}
+	\end{aligned}
+	\]
+	
+	\[
+	h(t) = h_0(t) \cdot \exp\left( 
+	-2.44 \cdot \text{Immune}_{\text{hybrid}} 
+	+ 0.25 \cdot \text{Sex}_{\text{Female}}
+	- 0.83 \cdot \text{Age}_{20\text{-}40} 
+	- 0.67 \cdot \text{Age}_{40\text{-}60} 
+	- 0.30 \cdot \text{Age}_{>60}
+	\right) + \epsilon
+	\]
+	
+	The AFT model with stratification by immune type and including age category is defined as:
+
+	\[
+	\log(T_{ij}) = \beta_0^{(j)} + \beta_1^{(j)} \cdot \text{sex} + \beta_2^{(j)} \cdot  \text{age}_{category} + \sigma^{(j)} \cdot \epsilon_{ij}
+	\]
+
+	\noindent where:
+	\begin{itemize}
+    	\item \( T_{ij} \): Survival time for individual \( i \) in stratum \( j \), where stratum \( j \) refers to vaccine-induced and hybrid-induced type.
+    	\item \( \log(T_{ij}) \): Natural logarithm of survival time, as modeled by the AFT model.
+    	\item \( \beta_0^{(j)} \): Intercept term for each stratum \( j \), indicating the baseline log-survival time.
+    	\item \( \beta_1^{(j)} \): Coefficient for \textit{sex} within stratum \( j \), reflecting the varying impact of sex on survival time across different strata.
+    	\item \( \beta_2^{(j) \): Coefficient for $\text{age}_{category}$, representing the effect of different age groups on log-survival time.
+    	\item \( \sigma^{(j)} \): Scale parameter for each stratum \( j \).
+    	\item \( \epsilon_{ij} \): Error term.
+	\end{itemize}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+\end{document}

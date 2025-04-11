@@ -1,0 +1,7 @@
+
+	Durbin-Watson test
+
+data:  residuals_scaled ~ fitted_values
+DW = 1.6032, p-value < 2.2e-16
+alternative hypothesis: true autocorrelation is greater than 0
+
