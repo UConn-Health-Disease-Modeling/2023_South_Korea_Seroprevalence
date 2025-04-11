@@ -512,14 +512,18 @@ data_KDCA <- data %>%
     latest_immunology_cat, 
     vac_before_S1_freq, 
     S_num_S1, 
+    S_num_S2,
     N_num_S1, 
+    N_num_S2, 
+    N_cha_S1, 
+    N_cha_S2,
     between_S1_S2_infec_cat, 
     infec_gap_after_S1, 
     gap_between_surveys, 
     time, 
     status
   )
-
+# 
 # saveRDS(data_Nstatus, "TempData/data_Nstatus.rds")
 # saveRDS(data_KDCA, "TempData/data_KDCA.rds")
 
@@ -554,7 +558,9 @@ input_data <- data %>%
     latest_immunology_cat, 
     vac_before_S1_freq, 
     S_num_S1, 
+    S_num_S2,
     N_num_S1, 
+    N_num_S2, 
     between_S1_S2_infec_cat, 
     infec_gap_after_S1, 
     gap_between_surveys
@@ -701,6 +707,14 @@ fit <- survfit(Surv(time, status) ~ immune_type,
                # data = data_KDCA,
                data = data_Nstatus,
                weights = wgt_1ag)
+summary_fit <- summary(fit)
+ci_data <- data.frame(
+  time = summary_fit$time,
+  strata = summary_fit$strata,
+  survival = summary_fit$surv,
+  lower_CI = summary_fit$lower,
+  upper_CI = summary_fit$upper
+)
 
 hybrid_colors <- c("Hybrid" = "#0000FF")
 vac_colors <- c("Vac" = "#DC143C")
