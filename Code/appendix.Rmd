@@ -16,7 +16,7 @@ library(purrr)
 library(tibble)
 library(lubridate)
 # list.files()
-
+rm(list = ls())
 # ------------------------------------------------------------------------------
 summary_table <- function(df, category = "age_category") {
   
@@ -188,11 +188,18 @@ conservative_hybrid <- summarize_categorical_distribution(
   immune_type_value = "hybrid-induced"
 )
 
-conservative_vaccine <- summarize_categorical_distribution(
+conservative_vac <- summarize_categorical_distribution(
   data = data_KDCA,
   vars = vars_to_tabulate,
   immune_type_value = "vac-induced"
 )
+
+conservative_inf <- summarize_categorical_distribution(
+  data = data_KDCA,
+  vars = vars_to_tabulate,
+  immune_type_value = "inf-induced"
+)
+
 
 inclusive_hybrid <- summarize_categorical_distribution(
   data = data_Nstatus,
@@ -200,11 +207,18 @@ inclusive_hybrid <- summarize_categorical_distribution(
   immune_type_value = "hybrid-induced"
 )
 
-inclusive_vaccine <- summarize_categorical_distribution(
+inclusive_vac <- summarize_categorical_distribution(
   data = data_Nstatus,
   vars = vars_to_tabulate,
   immune_type_value = "vac-induced"
 )
+
+inclusive_inf <- summarize_categorical_distribution(
+  data = data_Nstatus,
+  vars = vars_to_tabulate,
+  immune_type_value = "inf-induced"
+)
+
 
 pure_unconf_hybrid <- summarize_categorical_distribution(
   data = Nstatus_infec_pure,
@@ -212,25 +226,34 @@ pure_unconf_hybrid <- summarize_categorical_distribution(
   immune_type_value = "hybrid-induced"
 )
 
-pure_unconf_vaccine <- summarize_categorical_distribution(
+pure_unconf_vac <- summarize_categorical_distribution(
   data = Nstatus_infec_pure,
   vars = vars_to_tabulate,
   immune_type_value = "vac-induced"
 )
 
+pure_unconf_inf <- summarize_categorical_distribution(
+  data = Nstatus_infec_pure,
+  vars = vars_to_tabulate,
+  immune_type_value = "inf-induced"
+)
+
 # Combine into a named list of tibbles
 all_summaries <- list(
   conservative_hybrid    = conservative_hybrid,
-  conservative_vaccine   = conservative_vaccine,
+  conservative_vaccine   = conservative_vac,
+  conservative_infection   = conservative_inf,
   inclusive_hybrid       = inclusive_hybrid,
-  inclusive_vaccine      = inclusive_vaccine,
+  inclusive_vaccine      = inclusive_vac,
+  inclusive_infection      = inclusive_inf,
   pure_unconf_hybrid     = pure_unconf_hybrid,
-  pure_unconf_vaccine    = pure_unconf_vaccine
+  pure_unconf_vaccine    = pure_unconf_vac, 
+  pure_unconf_infection    = pure_unconf_inf
 )
 
 library(writexl)
 # Write to one Excel file with each tibble as a sheet
-# write_xlsx(all_summaries, path = "../summary_tables.xlsx")
+write_xlsx(all_summaries, path = "../summary_tables.xlsx")
 
 sample1 <- c(821, 2550, 903)
 sample2 <- c(62 ,3915, 761)

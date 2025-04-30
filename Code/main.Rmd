@@ -21,6 +21,7 @@ library(lubridate)
 # ----------------------------
 
 ```{r}
+rm(list = ls())
 url_S_12 <- "../data/datashare_240902/df_S1S2_240827.xlsx"
 
 S_12 <- readxl::read_excel(url_S_12) %>%
@@ -270,16 +271,23 @@ S_12.vac <- S_12 %>%
   filter(immune_type == "vac-induced", vac_before_S1_freq > 0) %>% 
   mutate(N_2nd_Survey = ifelse(between_S1_S2_vac_cat == "yes", "vac", 
                                ifelse(is.na(N_cha_S2), "follow_up_loss", 
-                                      ifelse(N_num_S2 >  N_num_S1, "infection", "non_infection"))))
+                                      ifelse(N_cha_S2 == "Reactive", "infection", "non_infection"))))
 # table(S_12.vac$N_2nd_Survey)
 # S_12.vac %>% filter(N_2nd_Survey == "vac") %>% filter(!is.na(N_num_S2)) %>% filter(N_cha_S2 == "Nonreactive")
 
+S_12.inf <- S_12 %>%
+  filter(immune_type == "inf-induced" | 
+         (immune_type == "hybrid-induced" & vac_before_S1_freq == 0) | 
+         (immune_type == "vac-induced" & vac_before_S1_freq == 0 )) %>% 
+  mutate(N_2nd_Survey = ifelse(between_S1_S2_vac_cat == "yes", "vac", 
+                               ifelse(is.na(N_cha_S2), "follow_up_loss", 
+                                      ifelse(N_num_S2 >  N_num_S1, "infection", "non_infection"))))
+# table(S_12.inf$N_2nd_Survey)
 
 
 
 # *----------------------------------------------------------------------------*
-# Conservative cohort
-# define the confirmed infection and non-infection
+# Conservative cohort (hybrid)
 S_12.hybrid <- S_12.hybrid %>% 
   mutate(KDCA = ifelse(
     between_S1_S2_infec_cat == "yes", 
@@ -300,8 +308,8 @@ S_12.hybrid$KDCA <- ifelse(
 S_12.hybrid$KDCA <- ifelse(S_12.hybrid$N_2nd_Survey == "follow_up_loss" & 
                              S_12.hybrid$KDCA == "follow_up_loss", "non_infection", S_12.hybrid$KDCA)
 
-# table(S_12.hybrid$KDCA)
 
+# Conservative cohort (vac)
 S_12.vac <- S_12.vac %>% 
   mutate(KDCA = ifelse(
     between_S1_S2_infec_cat == "yes", 
@@ -321,18 +329,40 @@ S_12.vac$KDCA <- ifelse(
 
 S_12.vac$KDCA <- ifelse(S_12.vac$N_2nd_Survey == "follow_up_loss" & 
                              S_12.vac$KDCA == "follow_up_loss", "non_infection", S_12.vac$KDCA)
-# table(S_12.vac$KDCA)
+
+
+# Conservative cohort (inf)
+S_12.inf <- S_12.inf %>% 
+  mutate(KDCA = ifelse(
+    between_S1_S2_infec_cat == "yes", 
+    "infection", 
+    ifelse(N_2nd_Survey == "follow_up_loss", "follow_up_loss", "non_infection")
+  ))
+
+S_12.inf$KDCA <- ifelse(
+  S_12.inf$KDCA == "infection" & 
+  !is.na(S_12.inf$vac_gap_after_S1) & 
+    !is.na(S_12.inf$vac_gap_after_S1) &
+    S_12.inf$vac_gap_after_S1 < S_12.inf$infec_gap_after_S1, NA, S_12.inf$KDCA)
+
+S_12.inf$KDCA <- ifelse(
+  S_12.inf$KDCA == "non_infection" & S_12.inf$N_2nd_Survey == "vac", NA, S_12.inf$KDCA
+)
+
+S_12.inf$KDCA <- ifelse(S_12.inf$N_2nd_Survey == "follow_up_loss" & 
+                             S_12.inf$KDCA == "follow_up_loss", "non_infection", S_12.inf$KDCA)
+
+S_12.hybrid$KDCA[is.na(S_12.hybrid$KDCA)] <- "none"
+S_12.vac$KDCA[is.na(S_12.vac$KDCA)] <- "none"
+S_12.inf$KDCA[is.na(S_12.inf$KDCA)] <- "none"
 
 
 # save the processed data
 # saveRDS(S_12.hybrid, "TempData/S_12.hybrid.rds")
 # saveRDS(S_12.vac, "TempData/S_12.vac.rds")
+# saveRDS(S_12.inf, "TempData/S_12.inf.rds")
 
 
-# S_12.hybrid$KDCA[is.na(S_12.hybrid$KDCA)] <- "none"
-# S_12.vac$KDCA[is.na(S_12.vac$KDCA)] <- "none"
-# 
-# 
 # S_12.comb <- rbind(S_12.hybrid, S_12.vac)
 # weighted_counts <- tapply(S_12.comb$wgt_1ag, S_12.comb$KDCA, sum, na.rm = TRUE)
 # weighted_counts / sum(weighted_counts, na.rm = FALSE)
@@ -359,13 +389,14 @@ rm(list = ls())
 # load processed data
 url <- list(
   hybrid = "TempData/S_12.hybrid.rds", 
-  vac = "TempData/S_12.vac.rds"
+  vac = "TempData/S_12.vac.rds", 
+  inf = "TempData/S_12.inf.rds"
 )
 
-vac <- readRDS(url$vac)
 hybrid <- readRDS(url$hybrid)
+vac <- readRDS(url$vac)
+inf <- readRDS(url$inf)
 
-table(vac$N_2nd_Survey, vac$between_S1_S2_vac_cat)
 
 # calculate the latest immunology
 vac <- vac %>%
@@ -382,6 +413,12 @@ hybrid <- hybrid %>%
              pmin(vac_gap_before_S1, infec_gap_before_S1, na.rm = TRUE))), 
     infec_gap = infec_gap_after_S1)
 
+inf <- inf %>%
+  mutate(latest_immunology = ifelse(
+    is.na(vac_gap_before_S1), infec_gap_before_S1,
+      ifelse(is.na(infec_gap_before_S1), vac_gap_before_S1,
+             pmin(vac_gap_before_S1, infec_gap_before_S1, na.rm = TRUE))), 
+    infec_gap = infec_gap_after_S1)
 
 # define the imputation function
 impute_infec_gap <- function(df) {
@@ -416,9 +453,11 @@ impute_infec_gap <- function(df) {
 # apply the function to impute
 vac_full = impute_infec_gap(vac)
 hybrid_full = impute_infec_gap(hybrid)
+inf_full = impute_infec_gap(inf)
 
 # bind to get full dataset 
-data <- rbind(vac_full, hybrid_full)
+inf_full$immune_type <- "inf-induced"
+data <- rbind(vac_full, hybrid_full, inf_full)
 
 # categorize the latest immunology
 data <- data %>%
@@ -563,8 +602,9 @@ input_data <- data %>%
     N_num_S2, 
     between_S1_S2_infec_cat, 
     infec_gap_after_S1, 
-    gap_between_surveys
+    gap_between_surveys, KDCA
   )
+
 
 # define the summary table function 
 summary_table <- function(df, category = "age_category") {
@@ -582,7 +622,7 @@ summary_table <- function(df, category = "age_category") {
     ungroup() %>%
     mutate(
       prop = round(count_overall / sum(count_overall) * 100, 1),
-      wgt_prop = paste0(sprintf("(%0.1f)", total_wgt / sum(total_wgt) * 100))
+      wgt_prop = round(total_wgt / sum(total_wgt) * 100, 1)
     ) %>%
     select(!!cat_sym, count_overall, prop, wgt_prop)
   
@@ -597,7 +637,7 @@ summary_table <- function(df, category = "age_category") {
     ungroup() %>%
     mutate(
       prop_hybrid = round(count_hybrid / sum(count_hybrid) * 100, 1),
-      wgt_prop_hybrid = paste0(sprintf("(%0.1f)", total_wgt / sum(total_wgt) * 100))
+      wgt_prop_hybrid = round(total_wgt / sum(total_wgt) * 100, 1)
     ) %>%
     select(!!cat_sym, count_hybrid, prop_hybrid, wgt_prop_hybrid)
   
@@ -612,64 +652,81 @@ summary_table <- function(df, category = "age_category") {
     ungroup() %>%
     mutate(
       prop_vac = round(count_vac / sum(count_vac) * 100, 1),
-      wgt_prop_vac = paste0(sprintf("(%0.1f)", total_wgt / sum(total_wgt) * 100))
+      wgt_prop_vac = round(total_wgt / sum(total_wgt) * 100, 1)
     ) %>%
     select(!!cat_sym, count_vac, prop_vac, wgt_prop_vac)
+  
+  # Summary for "inf-induced"
+  inf_table <- df %>%
+    filter(immune_type == "inf-induced") %>%
+    group_by(!!cat_sym) %>%
+    summarise(
+      count_inf = n(),
+      total_wgt = sum(wgt_1ag, na.rm = TRUE)
+    ) %>%
+    ungroup() %>%
+    mutate(
+      prop_inf = round(count_inf / sum(count_inf) * 100, 1),
+      wgt_prop_inf = round(total_wgt / sum(total_wgt) * 100, 1)
+    ) %>%
+    select(!!cat_sym, count_inf, prop_inf, wgt_prop_inf)
   
   # Merge the overall and immune type-specific summaries by the category column.
   final_table <- overall_table %>%
     left_join(hybrid_table, by = category) %>%
-    left_join(vac_table, by = category)
+    left_join(vac_table, by = category) %>% 
+    left_join(inf_table, by = category)
   
   return(final_table)
 }
 
 # # for age_category
-# final_result <- summary_table(df = input_data, category = "age_category")
-# final_result %>%
-#   arrange(factor(age_category, levels = c("<20", "20-40", "40-60", ">60")))
+final_result <- summary_table(df = input_data, category = "age_category")
+t <- final_result %>%
+  arrange(factor(age_category, levels = c("<20", "20-40", "40-60", ">60")))
 
 # # for sex
-# final_result <- summary_table(df = input_data, category = "sex")
-# final_result %>%
-#   arrange(factor(sex, levels = c("Male", "Female")))
+final_result <- summary_table(df = input_data, category = "sex")
+t <- final_result %>%
+  arrange(factor(sex, levels = c("Male", "Female")))
 
 # # for BMI
-# input_data$BMI <-  input_data$weight/((input_data$height/100)^2)
-# input_data$BMI_cat <- cut(
-#   input_data$BMI,
-#   breaks = c(-Inf, 18.5, 24.9, Inf),
-#   labels = c("Low", "Normal", "Obesity"),
-#   include.lowest = TRUE
-# )
-# 
-# final_result <- summary_table(df = input_data, category = "BMI_cat")
-# final_result %>%
-#   arrange(factor(BMI_cat, levels = c("Low", "Normal", "Obesity")))
+input_data$BMI <-  input_data$weight/((input_data$height/100)^2)
+input_data$BMI_cat <- cut(
+  input_data$BMI,
+  breaks = c(-Inf, 18.5, 24.9, Inf),
+  labels = c("Low", "Normal", "Obesity"),
+  include.lowest = TRUE
+)
+
+final_result <- summary_table(df = input_data, category = "BMI_cat")
+t <- final_result %>%
+  arrange(factor(BMI_cat, levels = c("Low", "Normal", "Obesity")))
 
 # # for Diseases
-# input_data$cat_diseases_S1 <- ifelse(input_data$num_diseases_S1 == 0, "none",
-#                                           ifelse(input_data$num_diseases_S1 == 1, 1,
-#                                                  ifelse(input_data$num_diseases_S1 == 2, 2, ">=3")))
-# 
-# final_result <- summary_table(df = input_data, category = "cat_diseases_S1")
-# final_result <- final_result %>%
-#   arrange(factor(cat_diseases_S1, levels = c("none", "1", "2", ">=3")))
+input_data$cat_diseases_S1 <- ifelse(input_data$num_diseases_S1 == 0, "none",
+                                          ifelse(input_data$num_diseases_S1 == 1, 1,
+                                                 ifelse(input_data$num_diseases_S1 == 2, 2, ">=3")))
+
+final_result <- summary_table(df = input_data, category = "cat_diseases_S1")
+t <- final_result %>%
+  arrange(factor(cat_diseases_S1, levels = c("none", "1", "2", ">=3")))
 
 # # latest immunology
-# final_result <- summary_table(df = input_data, category = "latest_immunology_cat")
+t <- summary_table(df = input_data, category = "latest_immunology_cat")
 
-# # vaccine dose
-# input_data$vac_dose <- ifelse(input_data$vac_before_S1_freq < 3, "primary_dose", input_data$vac_before_S1_freq)
-# final_result <- summary_table(df = input_data, category = "vac_dose")
-# final_result <- final_result %>%
-#   arrange(factor(vac_dose, levels = c("primary_dose", "3", "4")))
+# vaccine dose
+input_data$vac_dose <- ifelse(input_data$vac_before_S1_freq == 0, "no_vac", 
+                              ifelse(input_data$vac_before_S1_freq < 3, "primary_dose", input_data$vac_before_S1_freq))
+final_result <- summary_table(df = input_data, category = "vac_dose")
+t <- final_result %>%
+  arrange(factor(vac_dose, levels = c("no_vac", "primary_dose", "3", "4")))
 
 # # between surveys status
-final_result <- summary_table(df = input_data, category = "N_2nd_Survey")
+t <- summary_table(df = input_data, category = "N_2nd_Survey")
 
-# Write the final result to a CSV file.
-write.csv(final_result, file = "../summary.csv", row.names = FALSE)
+t <- summary_table(df = input_data, category = "KDCA")
+
 ```
 
 ## do the survival analysis
@@ -687,14 +744,17 @@ data_Nstatus <- readRDS(url$N_status)
 data_KDCA <- readRDS(url$KDCA)
 
 # table(data_Nstatus$immune_type, data_Nstatus$status)
+# table(data_KDCA$immune_type, data_KDCA$status)
+
+
 data_Nstatus$immune_type <- factor(
   data_Nstatus$immune_type,
-  levels = c("hybrid-induced", "vac-induced")
+  levels = c("hybrid-induced", "vac-induced", "inf-induced")
 )
 
 data_KDCA$immune_type <- factor(
   data_KDCA$immune_type,
-  levels = c("hybrid-induced", "vac-induced")
+  levels = c("hybrid-induced", "vac-induced", "inf-induced")
 )
 
 library(ggsurvfit)
@@ -703,11 +763,11 @@ library(survival)
 library(flexsurv)
 
 # with immune_type only
-fit <- survfit(Surv(time, status) ~ immune_type, 
-               # data = data_KDCA,
-               data = data_Nstatus,
+fit_cox <- survfit(Surv(time, status) ~ immune_type, 
+               data = data_KDCA,
+               # data = data_Nstatus,
                weights = wgt_1ag)
-summary_fit <- summary(fit)
+
 ci_data <- data.frame(
   time = summary_fit$time,
   strata = summary_fit$strata,
@@ -718,7 +778,8 @@ ci_data <- data.frame(
 
 hybrid_colors <- c("Hybrid" = "#0000FF")
 vac_colors <- c("Vac" = "#DC143C")
-combined_colors <- c(hybrid_colors, vac_colors)
+inf_colors <- c("Inf" = "orange")
+combined_colors <- c(hybrid_colors, vac_colors,inf_colors)
 
 ggsurv <- ggsurvplot(
   fit = fit, 
@@ -734,7 +795,7 @@ ggsurv <- ggsurvplot(
   conf.int = TRUE, 
   palette = combined_colors,  # Use the combined color palette
   legend.labs = c(
-    "Hybrid", "Vac"
+    "Hybrid", "Vac", "Inf"
   ),
   xlab = "Months", 
   ylab = "Overall Survival Probability",
@@ -765,7 +826,7 @@ p1 <- ggsurv$plot +
   ylab("Probability of Protective Effectiveness Against Infection") + 
   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"))
 
-ggsave("../result/plots/fig2(2).png", plot = p1, width = 10, height = 6, dpi = 200)
+ggsave("../result/plots/fig2(1).png", plot = p1, width = 10, height = 6, dpi = 200)
 
 
 
@@ -774,80 +835,154 @@ ggsave("../result/plots/fig2(2).png", plot = p1, width = 10, height = 6, dpi = 2
 
 
 
-# with immune_type and age_category
-fit <- survfit(Surv(time, status) ~ immune_type + age_category, 
-               # data = data_KDCA,
-               data = data_Nstatus,
-               weights = wgt_1ag)
+# Define hazard table function (similar to age_risk_table)
+age_hazard_table <- function(df, age_selection = "no") {
+  age_categories <- c("<20", "20-40", "40-60", ">60")
+  immune_types   <- c("hybrid-induced", "vac-induced")
+  
+  result_list <- list()
+  
+  for (imm in immune_types) {
+    if (age_selection == "yes") {
+      sub_list <- lapply(age_categories, function(age_cat) {
+        df %>%
+          filter(immune_type == imm, age_category == age_cat) %>%
+          generate_survival_table(grid) %>%
+          mutate(hazard = as.numeric(h),  # make sure it's numeric
+                 age = age_cat,
+                 immune = imm,
+                 time = as.numeric(time)) %>%
+          select(time, immune, age, hazard)
+      })
+      sub_df <- do.call(rbind, sub_list)
+    } else {
+      sub_df <- df %>%
+        filter(immune_type == imm) %>%
+        generate_survival_table(grid) %>%
+        mutate(hazard = as.numeric(h),
+               age = "all",
+               immune = imm,
+               time = as.numeric(time)) %>%
+        select(time, immune, age, hazard)
+    }
+    result_list[[imm]] <- sub_df
+  }
+  
+  hazard_df <- do.call(rbind, result_list)
+  return(hazard_df)
+}
 
-hybrid_colors <- c(
-  "Hybrid <20" = "#ADD8E6",  # Light Blue
-  "Hybrid 20-39" = "#6495ED",  # Cornflower Blue
-  "Hybrid 40-59" = "#0000FF",  # Blue
-  "Hybrid >=60" = "#00008B"  # Dark Blue
-)
+hazard_df <- age_hazard_table(data_Nstatus, age_selection = "no")
 
-vac_colors <- c(
-  "Vac <20" = "#FFA07A",  # Light Salmon
-  "Vac 20-39" = "#FF6347",  # Tomato
-  "Vac 40-59" = "#DC143C",  # Crimson
-  "Vac >=60" = "#800000"  # Maroon
-)
+# Plot hazard over time
+library(ggplot2)
 
-combined_colors <- c(hybrid_colors, vac_colors)
+ggplot(hazard_df, aes(x = time, y = hazard, color = immune, group = immune)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  labs(title = "Hazard Rates Over Time by Immune Type",
+       x = "Time Interval (arbitrary units or months)",
+       y = "Hazard Rate",
+       color = "Immune Type") +
+  scale_color_manual(values = c("hybrid-induced" = "blue", "vac-induced" = "red")) +
+  theme_minimal()
 
-ggsurv <- ggsurvplot(
-  fit = fit, 
-  data = data_Nstatus,
-  risk.table = TRUE,  
-  risk.table.col = "strata", 
-  risk.table.height = 0.25, 
-  risk.table.y.text.col = TRUE, 
-  risk.table.y.text = TRUE, 
-  ncensor.plot = TRUE,
-  ncensor.plot.height = 0.25, 
-  pval = TRUE,
-  conf.int = TRUE, 
-  palette = combined_colors,  # Use the combined color palette
-  legend.labs = c(
-    "Hybrid <20", "Hybrid 20-39", "Hybrid 40-59", "Hybrid >=60",
-    "Vac <20", "Vac 20-39", "Vac 40-59", "Vac >=60"
-  ),
-  xlab = "Months", 
-  ylab = "Overall Survival Probability",
-  break.time.by = 1,
-  ggtheme = theme_minimal() +
-    theme(
-      legend.position = "right",  # Position the legend
-      legend.text = element_text(size = 10),
-      legend.title = element_text(size = 1),
-      plot.margin = unit(c(1, 5, 1, 1), "cm"),
-      panel.border = element_rect(color = "black", fill = NA, size = 1)
-    ),
-  ylim = c(0.4, 1),  # Set y-axis limits, 
-  xlim = c(0, 4.5)
-)
 
-p1 <- ggsurv$plot + 
-  scale_color_manual(values = combined_colors) +  # Apply the color palette
-  theme(
-    legend.position = c(0.08, 0.2),
-    legend.text = element_text(size = 10),  # Adjust legend text size
-    legend.title = element_text(size = 10),  # Adjust legend title size
-    legend.key.size = unit(0.5, "cm")  # Adjust legend key size
-  ) +
-  guides(colour = guide_legend(nrow = 2, byrow = TRUE, 
-                               title.position = "top",
-                               title.hjust = 0.5)) + 
-  ylab("Probability of Protective Effectiveness Against Infection") + 
-  theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"))
 
-ggsave("../result/plots/fig3(2).png", plot = p1, width = 10, height = 6, dpi = 200)
+
+
+
+
+
+
+
+
+
+
+# 
+# hybrid_colors <- c(
+#   "Hybrid <20" = "#ADD8E6",  # Light Blue
+#   "Hybrid 20-39" = "#6495ED",  # Cornflower Blue
+#   "Hybrid 40-59" = "#0000FF",  # Blue
+#   "Hybrid >=60" = "#00008B"  # Dark Blue
+# )
+# 
+# vac_colors <- c(
+#   "Vac <20" = "#FFA07A",  # Light Salmon
+#   "Vac 20-39" = "#FF6347",  # Tomato
+#   "Vac 40-59" = "#DC143C",  # Crimson
+#   "Vac >=60" = "#800000"  # Maroon
+# )
+# 
+# combined_colors <- c(hybrid_colors, vac_colors)
+# 
+# ggsurv <- ggsurvplot(
+#   fit = fit, 
+#   data = data_Nstatus,
+#   risk.table = TRUE,  
+#   risk.table.col = "strata", 
+#   risk.table.height = 0.25, 
+#   risk.table.y.text.col = TRUE, 
+#   risk.table.y.text = TRUE, 
+#   ncensor.plot = TRUE,
+#   ncensor.plot.height = 0.25, 
+#   pval = TRUE,
+#   conf.int = TRUE, 
+#   palette = combined_colors,  # Use the combined color palette
+#   legend.labs = c(
+#     "Hybrid <20", "Hybrid 20-39", "Hybrid 40-59", "Hybrid >=60",
+#     "Vac <20", "Vac 20-39", "Vac 40-59", "Vac >=60"
+#   ),
+#   xlab = "Months", 
+#   ylab = "Overall Survival Probability",
+#   break.time.by = 1,
+#   ggtheme = theme_minimal() +
+#     theme(
+#       legend.position = "right",  # Position the legend
+#       legend.text = element_text(size = 10),
+#       legend.title = element_text(size = 1),
+#       plot.margin = unit(c(1, 5, 1, 1), "cm"),
+#       panel.border = element_rect(color = "black", fill = NA, size = 1)
+#     ),
+#   ylim = c(0.4, 1),  # Set y-axis limits, 
+#   xlim = c(0, 4.5)
+# )
+# 
+# p1 <- ggsurv$plot + 
+#   scale_color_manual(values = combined_colors) +  # Apply the color palette
+#   theme(
+#     legend.position = c(0.08, 0.2),
+#     legend.text = element_text(size = 10),  # Adjust legend text size
+#     legend.title = element_text(size = 10),  # Adjust legend title size
+#     legend.key.size = unit(0.5, "cm")  # Adjust legend key size
+#   ) +
+#   guides(colour = guide_legend(nrow = 2, byrow = TRUE, 
+#                                title.position = "top",
+#                                title.hjust = 0.5)) + 
+#   ylab("Probability of Protective Effectiveness Against Infection") + 
+#   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"))
+# 
+# ggsave("../result/plots/fig3(2).png", plot = p1, width = 10, height = 6, dpi = 200)
 
 ```
 
 ## generate survival table 
 ```{r}
+
+data_KDCA$num_diseases_S1
+
+fit_cox <- coxph(Surv(time, status) ~ immune_type,
+                 data = data_KDCA,
+                 weights = wgt_1ag)
+ph_test <- cox.zph(fit_cox)
+print(ph_test)
+
+fit_cox <- coxph(Surv(time, status) ~ immune_type + age_category + sex + vac_before_S1_freq + immune_type:age_category + immune_type:sex + immune_type:vac_before_S1_freq,
+                 data = data_Nstatus,
+                 weights = wgt_1ag)
+ph_test <- cox.zph(fit_cox)
+print(ph_test)
+
 generate_survival_table <- function(data, grid) {
   survival_table <- matrix(nrow = length(grid) - 1, ncol = 6)
   colnames(survival_table) <- c("time", "n", "y", "l", "h", "S_hat")
@@ -926,8 +1061,30 @@ age_risk_table <- function(df, age_selection = "no"){
 
 # age_risk_table(data_Nstatus, age_selection = "no") %>% write.csv(file = "../risk_tabel.csv")
 
-# generate_survival_table(data_Nstatus %>% filter(immune_type == "hybrid-induced"), grid = grid) %>% 
-#   write.csv(file = "../survival_tabel.csv")
+generate_survival_table(data_KDCA %>% filter(immune_type == "vac-induced"), grid = grid) 
+# 
+# data_vac <- matrix(c(
+#   2502, 417,
+#   2085, 193,
+#   1892, 230,
+#   1662, 119
+# ), nrow = 4, byrow = TRUE)
+# 
+# data_inf <- matrix(c(
+#   410, 44,
+#   366, 21,
+#   345, 26,
+#   319, 6
+# ), nrow = 4, byrow = TRUE)
+# 
+# data_hyb <- matrix(c(
+#   3078, 91,
+#   2987, 86,
+#   2901, 243,
+#   2658, 143
+# ), nrow = 4, byrow = TRUE)
+# 
+# fisher.test(rbind(data_inf[1, ], data_hyb[1, ]))
 ```
 
 
