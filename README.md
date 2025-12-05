@@ -1,36 +1,54 @@
-# Infection Risk Evaluation After Omicron Using Serological and Confirmed Data
-
 ## Overview
+This repository contains analysis code for estimating SARS-CoV-2 infection risk after South Korea’s Omicron wave using nationwide serological data (K-SEROSMART) linked with vaccination and confirmed-case surveillance. Both confirmed and serology-inferred infections are incorporated to provide a more accurate assessment of post-Omicron immunity.
 
-This repository contains analysis code and supporting materials for a study evaluating infection risk following the Omicron wave in South Korea. The study compares hybrid immunity (infection + vaccination) and vaccine-only immunity, incorporating both confirmed and unconfirmed infections based on serological data.
+## Immunity Groups
+Participants were categorized using S/N antibody results and vaccination history:
 
-## Background
+- Hybrid immunity  
+- Vaccine-induced immunity  
+- Infection-induced immunity  
+- Naïve
 
-Evaluating risk after an Omicron wave is particularly challenging due to a high number of unconfirmed infections. To address this, we analyzed infection risk in populations with different immune statuses using both confirmed cases from national surveillance and unconfirmed infections inferred from antibody dynamics.
+## Outcomes
+Two infection outcomes were defined:
+
+- **Conservative:** laboratory-confirmed cases only  
+- **Inclusive:** confirmed cases + serology-inferred infections  
+  - N seroconversion (vaccine-only)  
+  - Significant N-titer increase (hybrid / infection-only)
+
+Missing infection dates for inferred cases were imputed using predictive mean matching (m=50).
 
 ## Methods
+- Participants vaccinated between Waves 1 and 2 were excluded.  
+- Age-standardized Kaplan–Meier estimators were used for cumulative risk.  
+- Time-varying Cox models fitted hazards over 4-month follow-up (proportional hazards violated).  
+- Adjustments included age and sex; landmark analyses were performed for validation.
 
-- Nationwide serological and surveillance data were used.
-- Individuals were categorized into **hybrid immunity** or **vaccine-only immunity** groups based on S and N antibody test results.
-- Infections were identified by:
-  - Confirmed dates from the KDCA database.
-  - Inferred cases from N seroconversion or significant N titer increases (Aug–Dec 2022).
-- Two outcome definitions were applied:
-  - **Conservative**: Only confirmed infections.
-  - **Inclusive**: Confirmed + unconfirmed infections.
-- We assessed misclassification using varying thresholds for N titer increases.
-- Differences in survival and risk between groups were evaluated using Cox proportional hazards models over a 4-month follow-up.
+## Key Findings
+- **4-month cumulative risk (inclusive outcome):**
+  - Hybrid: 20%  
+  - Infection-induced: 24%  
+  - Vaccine-only: 40%
 
-## Results
+- **Unconfirmed infections were common:**
+  - Hybrid: 92%  
+  - Infection-induced: 81%  
+  - Vaccine-only: 50%
 
-- **Hybrid group**: Infection risk increased from **2% (conservative)** to **20% (inclusive)**.
-- **Vaccine-only group**: Risk rose from **30% to 40%**.
-- The protective advantage of hybrid immunity dropped from ~5-fold to ~2-fold over four months.
-- **Unconfirmed infections**:
-  - 92% of infections in the hybrid group were unconfirmed (62 confirmed vs. 563 unconfirmed).
-  - 45% in the vaccine-only group were unconfirmed (821 confirmed vs. 1,063 unconfirmed).
-- Middle-aged individuals (ages 40–59) and recent infections (<6 months) were more likely to be unconfirmed cases, especially in the hybrid group.
+- **Hybrid immunity showed strong early protection**, but waned rapidly when asymptomatic/mild infections were included.  
+- Infection-induced immunity demonstrated **similar or greater protection** than hybrid immunity by month 4.
 
 ## Conclusions
+Including serology-inferred infections reveals a much higher true infection burden and a faster decline in hybrid immunity than suggested by confirmed cases alone. Serological surveillance is essential for tracking silent transmission and guiding booster strategies.
 
-Operational definitions of infection significantly affect incidence estimates. Including serologically inferred infections reveals a much larger infection burden, especially in those with recent infections or hybrid immunity. Surveillance and interventions (e.g., updated boosters) should prioritize middle-aged and vulnerable individuals who may experience undetected infections due to slower antibody responses or faster waning.
+## Repository Structure
+- `data_processing/` – serology cleaning, infection classification, imputation  
+- `survival_analysis/` – KM curves, Cox models, diagnostics  
+- `figures/` – scripts for classification diagrams, KM plots, hazard ratio curves  
+- `tables/` – Table 1–3 generation  
+- `sensitivity/` – N-titer thresholds and delta-adjusted imputation
+
+## Citation
+Please cite:  
+**“Protective effectiveness of SARS-CoV-2 infection risk among hybrid, vaccine, and infection-induced immunity against the Omicron variant, K-SEROSMART.”**
