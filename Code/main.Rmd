@@ -284,6 +284,11 @@ S_12.inf <- S_12 %>%
                                       ifelse(N_num_S2 >  N_num_S1, "infection", "non_infection"))))
 # table(S_12.inf$N_2nd_Survey)
 
+df <- S_12.hybrid %>% dplyr::filter(N_2nd_Survey == "follow_up_loss")
+df1 <- S_12.hybrid %>% dplyr::filter(N_2nd_Survey != "follow_up_loss")
+(df$agebase_cat2 %>% table())/dim(df)[1] %>% round(2)
+(df1$agebase_cat2 %>% table())/dim(df1)[1] %>% round(2)
+
 
 
 # *----------------------------------------------------------------------------*
@@ -761,12 +766,15 @@ library(ggsurvfit)
 library(survminer)
 library(survival)
 library(flexsurv)
+library(grid)
 
 # with immune_type only
-fit_cox <- survfit(Surv(time, status) ~ immune_type, 
+fit <- survfit(Surv(time, status) ~ immune_type, 
                data = data_KDCA,
                # data = data_Nstatus,
                weights = wgt_1ag)
+
+summary_fit <- summary(fit)
 
 ci_data <- data.frame(
   time = summary_fit$time,
@@ -776,11 +784,13 @@ ci_data <- data.frame(
   upper_CI = summary_fit$upper
 )
 
+# 颜色保持一致
 hybrid_colors <- c("Hybrid" = "#0000FF")
-vac_colors <- c("Vac" = "#DC143C")
-inf_colors <- c("Inf" = "orange")
-combined_colors <- c(hybrid_colors, vac_colors,inf_colors)
+vac_colors <- c("Vaccine" = "#DC143C")
+inf_colors <- c("Infection" = "orange")
+combined_colors <- c(hybrid_colors, vac_colors, inf_colors)
 
+# ggsurvplot 主体
 ggsurv <- ggsurvplot(
   fit = fit, 
   data = data_Nstatus,
@@ -793,40 +803,47 @@ ggsurv <- ggsurvplot(
   ncensor.plot.height = 0.25, 
   pval = TRUE,
   conf.int = TRUE, 
-  palette = combined_colors,  # Use the combined color palette
-  legend.labs = c(
-    "Hybrid", "Vac", "Inf"
-  ),
-  xlab = "Months", 
-  ylab = "Overall Survival Probability",
+  palette = combined_colors,
+  legend.labs = c("Hybrid", "Vaccine", "Infection"),
+  xlab = "Time (Months)", 
+  ylab = "Estimated Log Hazard Ratio",  # 注意：这里可按语境改为 survival probability
   break.time.by = 1,
-  ggtheme = theme_minimal() +
+  ggtheme = theme_classic(base_size = 14, base_family = "serif") +
     theme(
-      legend.position = "right",  # Position the legend
-      legend.text = element_text(size = 10),
-      legend.title = element_text(size = 1),
-      plot.margin = unit(c(1, 5, 1, 1), "cm"),
-      panel.border = element_rect(color = "black", fill = NA, size = 1)
+      axis.line = element_line(color = "black", size = 0.6),
+      panel.grid.major.y = element_line(color = "gray80", linetype = "dotted"),
+      panel.grid.major.x = element_blank(),
+      panel.border = element_blank(),
+      legend.position = c(0.1, 0.9),
+      legend.text = element_text(size = 11),
+      legend.title = element_blank(),
+      legend.key.size = unit(0.4, "cm"),
+      legend.box.background = element_blank(),
+      plot.margin = margin(5, 5, 5, 5)
     ),
-  ylim = c(0.4, 1),  # Set y-axis limits, 
+  ylim = c(0.5, 1),
   xlim = c(0, 4.5)
 )
 
+# 主图优化（保持和plot_logHR_tt_cox一致）
 p1 <- ggsurv$plot + 
-  scale_color_manual(values = combined_colors) +  # Apply the color palette
+  scale_color_manual(values = combined_colors) +
   theme(
-    legend.position = c(0.08, 0.2),
-    legend.text = element_text(size = 10),  # Adjust legend text size
-    legend.title = element_text(size = 10),  # Adjust legend title size
-    legend.key.size = unit(0.5, "cm")  # Adjust legend key size
+    legend.position = c(0.06, 0.12),
+    legend.text = element_text(size = 11),
+    legend.title = element_blank(),
+    legend.key.size = unit(0.6, "cm"),
+    plot.margin = unit(c(0, 0, 0, 0), "mm")
   ) +
-  guides(colour = guide_legend(nrow = 2, byrow = TRUE, 
-                               title.position = "top",
-                               title.hjust = 0.5)) + 
-  ylab("Probability of Protective Effectiveness Against Infection") + 
-  theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"))
+  guides(colour = guide_legend(
+    nrow = 2, byrow = TRUE,
+    title.position = "top",
+    title.hjust = 0.5
+  )) +
+  ylab("Estimated Probability of Protection Against Infection") +
+  xlab("Time (Months)")
 
-ggsave("../result/plots/fig2(1).png", plot = p1, width = 10, height = 6, dpi = 200)
+# ggsave("../result/plots/fig2(11).png", plot = p1, width = 10, height = 7, dpi = 300)
 
 
 
@@ -963,6 +980,267 @@ ggplot(hazard_df, aes(x = time, y = hazard, color = immune, group = immune)) +
 #   theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm"))
 # 
 # ggsave("../result/plots/fig3(2).png", plot = p1, width = 10, height = 6, dpi = 200)
+
+
+# ------------------------------------------------------------------------------
+# cox-hazard regression model 
+plot_logHR_tt_cox <- function(fit_tv_cox, data) {
+  # Extract coefficients and variance-covariance matrix
+  coef_vec <- coef(fit_tv_cox)
+  vcov_mat <- vcov(fit_tv_cox)
+  
+  # Create time grid
+  t_grid <- seq(0.1, max(data$time, na.rm = TRUE), length.out = 200)
+  log_t <- log(t_grid)
+  
+  # Log-HR and variance for vac
+  logHR_vac <- coef_vec["vac"] + coef_vec["tt(vac)"] * log_t
+  var_logHR_vac <- vcov_mat["vac", "vac"] +
+    log_t^2 * vcov_mat["tt(vac)", "tt(vac)"] +
+    2 * log_t * vcov_mat["vac", "tt(vac)"]
+  se_logHR_vac <- sqrt(var_logHR_vac)
+  
+  # Log-HR and variance for inf
+  logHR_inf <- coef_vec["inf"] + coef_vec["tt(inf)"] * log_t
+  var_logHR_inf <- vcov_mat["inf", "inf"] +
+    log_t^2 * vcov_mat["tt(inf)", "tt(inf)"] +
+    2 * log_t * vcov_mat["inf", "tt(inf)"]
+  se_logHR_inf <- sqrt(var_logHR_inf)
+  
+  # Confidence intervals
+  logHR_vac_low <- logHR_vac - 1.96 * se_logHR_vac
+  logHR_vac_high <- logHR_vac + 1.96 * se_logHR_vac
+  
+  logHR_inf_low <- logHR_inf - 1.96 * se_logHR_inf
+  logHR_inf_high <- logHR_inf + 1.96 * se_logHR_inf
+  
+  # Plot setup
+  par(family = "serif", mar = c(5, 5, 1, 1), las = 1)
+  plot(t_grid, logHR_vac, type = "n", 
+       ylim = c(min(logHR_vac_low, logHR_inf_low), max(logHR_vac_high, logHR_inf_high)), 
+       xlab = "Time (Months)", 
+       ylab = "Log hazard ratio", 
+       cex.lab = 1.4, cex.axis = 1.2)
+  
+  # Add grid lines
+  grid(col = "lightgray", lty = "dotted", lwd = 0.8)
+  
+  # Confidence ribbons
+  polygon(c(t_grid, rev(t_grid)),
+          c(logHR_vac_low, rev(logHR_vac_high)),
+          col = adjustcolor("forestgreen", alpha.f = 0.25), border = NA)
+  
+  polygon(c(t_grid, rev(t_grid)),
+          c(logHR_inf_low, rev(logHR_inf_high)),
+          col = adjustcolor("orange", alpha.f = 0.25), border = NA)
+  
+  # Log-HR lines
+  lines(t_grid, logHR_vac, col = "forestgreen", lwd = 2)
+  lines(t_grid, logHR_inf, col = "orange", lwd = 2, lty = 2)
+  
+  # Reference line
+  abline(h = 0, col = "gray40", lty = 1, lwd = 1)
+  
+  # Legend
+  legend("topright", 
+         legend = c("Vaccine vs Hybrid", "Infection vs Hybrid"),
+         col = c("forestgreen", "orange"), 
+         lty = c(1, 2), 
+         lwd = 2, 
+         bty = "n", 
+         cex = 1)
+}
+
+
+plot_HR_tt_cox <- function(fit_tv_cox, data) {
+  # Extract coefficients and variance-covariance matrix
+  coef_vec <- coef(fit_tv_cox)
+  vcov_mat <- vcov(fit_tv_cox)
+  
+  # Create time grid
+  t_grid <- seq(0.1, max(data$time, na.rm = TRUE), length.out = 200)
+  log_t <- log(t_grid)
+  
+  # Log-HR and variance for vac
+  logHR_vac <- coef_vec["vac"] + coef_vec["tt(vac)"] * log_t
+  var_logHR_vac <- vcov_mat["vac", "vac"] +
+    log_t^2 * vcov_mat["tt(vac)", "tt(vac)"] +
+    2 * log_t * vcov_mat["vac", "tt(vac)"]
+  se_logHR_vac <- sqrt(var_logHR_vac)
+  
+  # Log-HR and variance for inf
+  logHR_inf <- coef_vec["inf"] + coef_vec["tt(inf)"] * log_t
+  var_logHR_inf <- vcov_mat["inf", "inf"] +
+    log_t^2 * vcov_mat["tt(inf)", "tt(inf)"] +
+    2 * log_t * vcov_mat["inf", "tt(inf)"]
+  se_logHR_inf <- sqrt(var_logHR_inf)
+  
+  # HRs and confidence intervals
+  HR_vac <- exp(logHR_vac)
+  HR_vac_lower <- exp(logHR_vac - 1.96 * se_logHR_vac)
+  HR_vac_upper <- exp(logHR_vac + 1.96 * se_logHR_vac)
+  
+  HR_inf <- exp(logHR_inf)
+  HR_inf_lower <- exp(logHR_inf - 1.96 * se_logHR_inf)
+  HR_inf_upper <- exp(logHR_inf + 1.96 * se_logHR_inf)
+  
+  # Plot setup
+  par(family = "serif", mar = c(4, 4, .5, .5))
+  plot(t_grid, HR_vac, type = "n", 
+       ylim = range(c(HR_vac_lower, HR_vac_upper, HR_inf_lower, HR_inf_upper)),
+       xlab = "Months", ylab = "Hazard ratio", 
+       cex.lab = 1.2, cex.axis = 1)
+  
+  # CI ribbons
+  polygon(c(t_grid, rev(t_grid)),
+          c(HR_vac_lower, rev(HR_vac_upper)),
+          col = adjustcolor("forestgreen", alpha.f = 0.2), border = NA)
+  
+  polygon(c(t_grid, rev(t_grid)),
+          c(HR_inf_lower, rev(HR_inf_upper)),
+          col = adjustcolor("orange", alpha.f = 0.2), border = NA)
+  
+  # HR curves
+  lines(t_grid, HR_vac, col = "forestgreen", lwd = 2)
+  lines(t_grid, HR_inf, col = "orange", lwd = 2, lty = 2)
+  
+  # Reference line at HR = 1
+  abline(h = 1, col = "gray40", lty = 1)
+  
+  # Legend
+  legend("topright", legend = c("Vaccine vs Hybrid", "Infection vs Hybrid"),
+         col = c("forestgreen", "orange"), lty = c(1, 2), lwd = 2, bty = "n", cex = 0.9)
+}
+
+extract_logHR_tt_cox <- function(fit_tv_cox, data) {
+  # Extract coefficients and variance-covariance matrix
+  coef_vec <- coef(fit_tv_cox)
+  vcov_mat <- vcov(fit_tv_cox)
+  
+  # Create time grid
+  t_grid <- seq(0.1, max(data$time, na.rm = TRUE), length.out = 200)
+  log_t <- log(t_grid)
+  
+  # Log-HR and variance for vac
+  logHR_vac <- coef_vec["vac"] + coef_vec["tt(vac)"] * log_t
+  var_logHR_vac <- vcov_mat["vac", "vac"] +
+                   log_t^2 * vcov_mat["tt(vac)", "tt(vac)"] +
+                   2 * log_t * vcov_mat["vac", "tt(vac)"]
+  se_logHR_vac <- sqrt(var_logHR_vac)
+  
+  # Log-HR and variance for inf
+  logHR_inf <- coef_vec["inf"] + coef_vec["tt(inf)"] * log_t
+  var_logHR_inf <- vcov_mat["inf", "inf"] +
+                   log_t^2 * vcov_mat["tt(inf)", "tt(inf)"] +
+                   2 * log_t * vcov_mat["inf", "tt(inf)"]
+  se_logHR_inf <- sqrt(var_logHR_inf)
+  
+  # Build data frame
+  data.frame(
+    time = t_grid,
+    logHR_vac = logHR_vac,
+    logHR_vac_lower = logHR_vac - 1.96 * se_logHR_vac,
+    logHR_vac_upper = logHR_vac + 1.96 * se_logHR_vac,
+    logHR_inf = logHR_inf,
+    logHR_inf_lower = logHR_inf - 1.96 * se_logHR_inf,
+    logHR_inf_upper = logHR_inf + 1.96 * se_logHR_inf
+  )
+}
+
+extract_HR_tt_cox <- function(fit_tv_cox, data) {
+  # Extract coefficients and variance-covariance matrix
+  coef_vec <- coef(fit_tv_cox)
+  vcov_mat <- vcov(fit_tv_cox)
+  
+  # Create time grid
+  t_grid <- seq(0.1, max(data$time, na.rm = TRUE), length.out = 200)
+  log_t <- log(t_grid)
+  
+  # Log-HR and variance for vac
+  logHR_vac <- coef_vec["vac"] + coef_vec["tt(vac)"] * log_t
+  var_logHR_vac <- vcov_mat["vac", "vac"] +
+    log_t^2 * vcov_mat["tt(vac)", "tt(vac)"] +
+    2 * log_t * vcov_mat["vac", "tt(vac)"]
+  se_logHR_vac <- sqrt(var_logHR_vac)
+  
+  # Log-HR and variance for inf
+  logHR_inf <- coef_vec["inf"] + coef_vec["tt(inf)"] * log_t
+  var_logHR_inf <- vcov_mat["inf", "inf"] +
+    log_t^2 * vcov_mat["tt(inf)", "tt(inf)"] +
+    2 * log_t * vcov_mat["inf", "tt(inf)"]
+  se_logHR_inf <- sqrt(var_logHR_inf)
+  
+  # Return data frame with HRs
+  data.frame(
+    time = t_grid,
+    HR_vac = exp(logHR_vac),
+    HR_vac_lower = exp(logHR_vac - 1.96 * se_logHR_vac),
+    HR_vac_upper = exp(logHR_vac + 1.96 * se_logHR_vac),
+    HR_inf = exp(logHR_inf),
+    HR_inf_lower = exp(logHR_inf - 1.96 * se_logHR_inf),
+    HR_inf_upper = exp(logHR_inf + 1.96 * se_logHR_inf)
+  )
+}
+
+library(ggsurvfit)
+library(survminer)
+library(survival)
+library(flexsurv)
+
+url <- list(
+  N_status = "TempData/data_Nstatus.rds", 
+  KDCA = "TempData/data_KDCA.rds"
+)
+
+# load data
+data_Nstatus <- readRDS(url$N_status)
+data_KDCA <- readRDS(url$KDCA)
+
+data_KDCA$vac <- as.numeric(data_KDCA$immune_type == "vac-induced")
+data_KDCA$inf <- as.numeric(data_KDCA$immune_type == "inf-induced")
+data_KDCA$sex <- factor(data_KDCA$sex, 
+                        levels = c("Male", "Female"))
+data_KDCA$age_category <- factor(data_KDCA$age_category, 
+                                 levels = c(">60", "<20", "20-40", "40-60"))
+
+
+data_Nstatus$vac <- as.numeric(data_Nstatus$immune_type == "vac-induced")
+data_Nstatus$inf <- as.numeric(data_Nstatus$immune_type == "inf-induced")
+data_Nstatus$sex <- factor(data_Nstatus$sex, 
+                           levels = c("Male", "Female"))
+data_Nstatus$age_category <- factor(data_Nstatus$age_category, 
+                                    levels = c(">60", "<20", "20-40", "40-60"))
+
+fit_tv_cox_KDCA <- coxph(Surv(time, status) ~ vac + inf + age_category + sex +
+                      tt(vac) + tt(inf),
+                    data = data_KDCA,
+                    weights = wgt_1ag,
+                    tt = function(x, t, ...) x * log(t))
+
+summary(fit_tv_cox_KDCA)
+logHR_df <- extract_logHR_tt_cox(fit_tv_cox_KDCA, data_KDCA)
+
+# Save plot to PNG
+png("../result/plots/logHR_tt_cox_KDCA.png", width = 1800, height = 1200, res = 300)
+plot_logHR_tt_cox(fit_tv_cox_KDCA, data_KDCA)
+dev.off()
+
+
+
+
+fit_tv_cox_Nstatus <- coxph(Surv(time, status) ~ vac + inf + age_category + sex +
+                      tt(vac) + tt(inf),
+                    data = data_Nstatus,
+                    weights = wgt_1ag,
+                    tt = function(x, t, ...) x * log(t))
+
+summary(fit_tv_cox_Nstatus)
+logHR_df <- extract_logHR_tt_cox(fit_tv_cox_Nstatus, data_Nstatus)
+
+png("../result/plots/logHR_tt_cox_Nstatus.png", width = 1800, height = 1200, res = 300)
+plot_logHR_tt_cox(fit_tv_cox_Nstatus, data_Nstatus)
+dev.off()
+
 
 ```
 
